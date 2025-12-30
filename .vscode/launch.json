@@ -1,0 +1,88 @@
+{
+  "version": "0.2.0",
+  "inputs": [
+    {
+      "id": "buildType",
+      "type": "pickString",
+      "description": "Build or Rebuild?",
+      "options": ["build", "rebuild"],
+      "default": "build"
+    }
+  ],
+  "configurations": [
+    // MSVC
+    {
+      "name": "MSVC Debug",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/msvc2022/bin/Debug/ropic_example.exe",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "preLaunchTask": "${input:buildType}:vs2022-debug"
+    },
+    {
+      "name": "MSVC Release",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/msvc2022/bin/Release/ropic_example.exe",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "preLaunchTask": "${input:buildType}:vs2022-release"
+    },
+    {
+      "name": "MSVC Tests Debug",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/msvc2022/bin/Debug/either-tests.exe",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "preLaunchTask": "${input:buildType}:vs2022-debug"
+    },
+    // GCC
+    {
+      "name": "GCC Debug",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/gcc-debug/bin/ropic_example.exe",
+      "cwd": "${workspaceFolder}",
+      "externalConsole": false,
+      "preLaunchTask": "${input:buildType}:gcc-debug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb"
+    },
+    {
+      "name": "GCC Release",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/gcc-release/bin/ropic_example.exe",
+      "cwd": "${workspaceFolder}",
+      "externalConsole": false,
+      "preLaunchTask": "${input:buildType}:gcc-release",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb"
+    },
+    // Clang (using GDB - more reliable on Windows than LLDB)
+    {
+      "name": "Clang Debug",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/clang-debug/bin/ropic_example.exe",
+      "cwd": "${workspaceFolder}",
+      "externalConsole": false,
+      "preLaunchTask": "${input:buildType}:clang-debug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb"
+    },
+    {
+      "name": "Clang Release",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/clang-release/bin/ropic_example.exe",
+      "cwd": "${workspaceFolder}",
+      "externalConsole": false,
+      "preLaunchTask": "${input:buildType}:clang-release",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb"
+    }
+  ]
+}

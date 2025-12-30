@@ -1,0 +1,92 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // MSVC
+    {
+      "label": "build:vs2022-debug",
+      "type": "shell",
+      "command": "cmake --build --preset build-vs2022-debug",
+      "group": "build",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build:vs2022-release",
+      "type": "shell",
+      "command": "cmake --build --preset build-vs2022-release",
+      "group": "build",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "rebuild:vs2022-debug",
+      "type": "shell",
+      "command": "cmake --build --preset build-vs2022-debug --clean-first",
+      "group": "build",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "rebuild:vs2022-release",
+      "type": "shell",
+      "command": "cmake --build --preset build-vs2022-release --clean-first",
+      "group": "build",
+      "problemMatcher": "$msCompile"
+    },
+    // GCC
+    {
+      "label": "build:gcc-debug",
+      "type": "shell",
+      "command": "cmake --build --preset build-gcc-debug",
+      "group": "build",
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "build:gcc-release",
+      "type": "shell",
+      "command": "cmake --build --preset build-gcc-release",
+      "group": "build",
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "rebuild:gcc-debug",
+      "type": "shell",
+      "command": "cmake --build --preset build-gcc-debug --clean-first",
+      "group": "build",
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "rebuild:gcc-release",
+      "type": "shell",
+      "command": "cmake --build --preset build-gcc-release --clean-first",
+      "group": "build",
+      "problemMatcher": "$gcc"
+    },
+    // Clang
+    {
+      "label": "build:clang-debug",
+      "type": "shell",
+      "command": "cmake --build --preset build-clang-debug",
+      "group": "build",
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "build:clang-release",
+      "type": "shell",
+      "command": "cmake --build --preset build-clang-release",
+      "group": "build",
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "rebuild:clang-debug",
+      "type": "shell",
+      "command": "cmake --build --preset build-clang-debug --clean-first",
+      "group": "build",
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "rebuild:clang-release",
+      "type": "shell",
+      "command": "cmake --build --preset build-clang-release --clean-first",
+      "group": "build",
+      "problemMatcher": "$gcc"
+    }
+  ]
+}

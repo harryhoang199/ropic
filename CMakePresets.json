@@ -1,0 +1,148 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "vs2022",
+      "displayName": "MSVC 2022",
+      "description": "Use MSVC for Debug and Release builds",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build/msvc2022",
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
+        "BUILD_EXAMPLES": "ON",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "gcc-debug",
+      "displayName": "GCC Debug",
+      "description": "Use GCC in Debug mode with debug info",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/gcc-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "BUILD_EXAMPLES": "ON",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "gcc-release",
+      "displayName": "GCC Release",
+      "description": "Use GCC in Release mode with optimizations",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/gcc-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "BUILD_EXAMPLES": "ON",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "clang-debug",
+      "displayName": "Clang Debug",
+      "description": "Use Clang in Debug mode with debug info and sanitizers",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/clang-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
+        "BUILD_EXAMPLES": "ON",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "clang-release",
+      "displayName": "Clang Release",
+      "description": "Use Clang in Release mode with optimizations and ThinLTO",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/clang-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
+        "BUILD_EXAMPLES": "ON",
+        "BUILD_TESTING": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "build-vs2022-debug",
+      "configurePreset": "vs2022",
+      "configuration": "Debug",
+      "description": "Build with MSVC in Debug mode",
+      "inherits": [],
+      "jobs": 8,
+      "verbose": false
+    },
+    {
+      "name": "build-vs2022-release",
+      "configurePreset": "vs2022",
+      "configuration": "Release",
+      "description": "Build with MSVC in Release mode",
+      "inherits": [],
+      "jobs": 8,
+      "verbose": false
+    },
+    {
+      "name": "build-gcc-debug",
+      "configurePreset": "gcc-debug",
+      "description": "Build with GCC in Debug mode",
+      "inherits": [],
+      "jobs": 8,
+      "verbose": false
+    },
+    {
+      "name": "build-gcc-release",
+      "configurePreset": "gcc-release",
+      "description": "Build with GCC in Release mode",
+      "inherits": [],
+      "jobs": 8,
+      "verbose": false
+    },
+    {
+      "name": "build-clang-debug",
+      "configurePreset": "clang-debug",
+      "description": "Build with Clang in Debug mode",
+      "inherits": [],
+      "jobs": 8,
+      "verbose": false
+    },
+    {
+      "name": "build-clang-release",
+      "configurePreset": "clang-release",
+      "description": "Build with Clang in Release mode",
+      "inherits": [],
+      "jobs": 8,
+      "verbose": false
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "default",
+      "configurePreset": "vs2022",
+      "output": {
+        "outputOnFailure": true
+      },
+      "environment": {
+        "GTEST_COLOR": "1"   
+      },
+      "execution": {
+        "jobs": 8
+      }
+    }
+  ]
+}
