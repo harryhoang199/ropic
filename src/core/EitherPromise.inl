@@ -54,6 +54,7 @@ namespace ropic::detail
     /// @brief Transforms co_await expressions for Either types.
     template <typename AWAITED>
     [[nodiscard]] auto await_transform(EITHER<AWAITED, ERROR> awaitable) noexcept
+        -> EitherAwaiter<AWAITED, ERROR, EitherPromise>
     {
       if (auto err = awaitable.error())
         return EitherAwaiter<AWAITED, ERROR, EitherPromise>{std::move(*err)};

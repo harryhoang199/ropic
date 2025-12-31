@@ -15,8 +15,8 @@
       "cacheVariables": {
         "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
-        "BUILD_EXAMPLES": "ON",
-        "BUILD_TESTING": "ON"
+        "ROPIC_BUILD_EXAMPLES": "ON",
+        "ROPIC_BUILD_TESTING": "ON"
       }
     },
     {
@@ -29,8 +29,8 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_C_COMPILER": "gcc",
         "CMAKE_CXX_COMPILER": "g++",
-        "BUILD_EXAMPLES": "ON",
-        "BUILD_TESTING": "ON"
+        "ROPIC_BUILD_EXAMPLES": "ON",
+        "ROPIC_BUILD_TESTING": "ON"
       }
     },
     {
@@ -43,8 +43,8 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_C_COMPILER": "gcc",
         "CMAKE_CXX_COMPILER": "g++",
-        "BUILD_EXAMPLES": "ON",
-        "BUILD_TESTING": "ON"
+        "ROPIC_BUILD_EXAMPLES": "ON",
+        "ROPIC_BUILD_TESTING": "ON"
       }
     },
     {
@@ -58,8 +58,8 @@
         "CMAKE_C_COMPILER": "clang",
         "CMAKE_CXX_COMPILER": "clang++",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
-        "BUILD_EXAMPLES": "ON",
-        "BUILD_TESTING": "ON"
+        "ROPIC_BUILD_EXAMPLES": "ON",
+        "ROPIC_BUILD_TESTING": "ON"
       }
     },
     {
@@ -73,8 +73,8 @@
         "CMAKE_C_COMPILER": "clang",
         "CMAKE_CXX_COMPILER": "clang++",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
-        "BUILD_EXAMPLES": "ON",
-        "BUILD_TESTING": "ON"
+        "ROPIC_BUILD_EXAMPLES": "ON",
+        "ROPIC_BUILD_TESTING": "ON"
       }
     }
   ],
@@ -138,7 +138,7 @@
         "outputOnFailure": true
       },
       "environment": {
-        "GTEST_COLOR": "1"   
+        "GTEST_COLOR": "1"
       },
       "execution": {
         "jobs": 8

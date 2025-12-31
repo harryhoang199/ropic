@@ -11,12 +11,39 @@ project(ropic
   LANGUAGES CXX
 )
 
+cmake_policy(SET CMP0167 NEW)
+
 # Set output directories (multi-config generators like VS append Debug/Release automatically)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-cmake_policy(SET CMP0167 NEW)
+# INSTALLATION CONFIGURATION 
+# Check if the user has NOT specified a custom CMAKE_INSTALL_PREFIX.
+# If they provided a prefix (e.g., -DCMAKE_INSTALL_PREFIX=/opt/myapp), we respect it.
+if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    # Check for "Developer Mode" conditions:
+    # 1. This is the top-level project (not included via add_subdirectory).
+    # 2. We are NOT running in a CI environment (Github Actions, GitLab CI, etc.).
+    #    CI systems usually set the "CI" environment variable.
+    if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND NOT DEFINED ENV{CI})
+
+        # --- DEVELOPMENT MODE ---
+        # Automatically set the install prefix to a local "install" folder inside the build directory.
+        # This allows developers to run 'cmake --install build' without sudo/admin rights.
+        set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Default install prefix for dev" FORCE)
+
+        message(STATUS "Default install path set to: ${CMAKE_INSTALL_PREFIX}")
+        
+    else()
+        # --- USER / SYSTEM / CI MODE ---
+        # Keep the default system path (e.g., /usr/local on Linux, Program Files on Windows).
+        # Or respect the parent project's configuration.
+        message(STATUS "Default install path: ${CMAKE_INSTALL_PREFIX}")
+    endif()
+
+    message(STATUS "Use '-DCMAKE_INSTALL_PREFIX=...' to override this.")
+endif()
 
 ###############################################################################
 # Configure Build Process                                                     #
@@ -487,11 +514,17 @@ endif()
 
 
 ###############################################################################
-# Generate Version Header                                                     #
+# Generate Version Header and ropic Header                                                     #
 ###############################################################################
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.hpp.in
   ${CMAKE_CURRENT_BINARY_DIR}/generated/ropic/version.hpp
+  @ONLY
+)
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/ropic.in
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/ropic/ropic
   @ONLY
 )
 
@@ -511,43 +544,45 @@ add_library(ropic::ropic ALIAS ropic)
 
 target_compile_features(ropic INTERFACE cxx_std_20)
 
+set(ROPIC_INSTALL_SHORTCUT_INCLUDEDIR shortcut_include)
 target_include_directories(ropic INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
-  $<INSTALL_INTERFACE:include>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  $<INSTALL_INTERFACE:${ROPIC_INSTALL_SHORTCUT_INCLUDEDIR}>
 )
 
 ###############################################################################
 # Options                                                                     #
 ###############################################################################
-option(BUILD_EXAMPLES "Build example executable" OFF)
-option(BUILD_TESTING "Build tests" OFF)
+option(ROPIC_BUILD_EXAMPLES "Build example executable" OFF)
+option(ROPIC_BUILD_TESTING "Build tests" OFF)
 
 ###############################################################################
-# Activate testing if BUILD_TESTING is ON                                     #
+# Activate testing if ROPIC_BUILD_TESTING is ON                                     #
 ###############################################################################
-if(BUILD_TESTING)
+if(ROPIC_BUILD_TESTING)
   add_subdirectory(tests)
 endif()
 
 ###############################################################################
 # Example Executable (optional)                                               #
 ###############################################################################
-if(BUILD_EXAMPLES)
-  add_executable(ropic_example
+if(ROPIC_BUILD_EXAMPLES)
+  add_executable(ropic_examples
     main.cpp
   )
 
-  target_compile_features(ropic_example PRIVATE cxx_std_20)
-  target_link_libraries(ropic_example PRIVATE ropic)
+  target_compile_features(ropic_examples PRIVATE cxx_std_20)
+  target_link_libraries(ropic_examples PRIVATE ropic)
 endif()
 
 
 ###############################################################################
 # Add necessary macros for example executable                                 #
 ###############################################################################
-if(BUILD_EXAMPLES)
-  target_compile_definitions(ropic_example PRIVATE
+if(ROPIC_BUILD_EXAMPLES)
+  target_compile_definitions(ropic_examples PRIVATE
     $<$<CONFIG:Debug>:_DEBUG> #Macro _DEBUG
     $<$<CONFIG:Release>:NDEBUG> #Macro NDEBUG for disabling assert()
     $<$<PLATFORM_ID:Windows>:_WIN32_WINNT=0x0601> #Macro _WIN32_WINNT
@@ -563,16 +598,21 @@ include(CMakePackageConfigHelpers)
 # Install header files preserving directory structure
 install(
   DIRECTORY src/
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ropic
   FILES_MATCHING
     PATTERN "*.hpp"
     PATTERN "*.inl"
 )
 
-# Install generated version header
+# Install generated version and ropic header
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/ropic/version.hpp
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ropic
+)
+
+install(
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/ropic/ropic
+  DESTINATION ${ROPIC_INSTALL_SHORTCUT_INCLUDEDIR}
 )
 
 # Install the library target
@@ -611,9 +651,9 @@ install(
 )
 
 # Optionally install example executable
-if(BUILD_EXAMPLES)
+if(ROPIC_BUILD_EXAMPLES)
   install(
-    TARGETS ropic_example
+    TARGETS ropic_examples
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
 endif()

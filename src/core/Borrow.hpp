@@ -84,5 +84,31 @@ namespace ropic
     {
       return _pointer == nullptr;
     }
+
+    /// @brief Returns the raw pointer.
+    [[nodiscard]] constexpr auto get() const noexcept -> T const *
+    {
+      return _pointer;
+    }
+
+    /// @copydoc get()
+    [[nodiscard]] constexpr auto get() noexcept -> T *
+    {
+      return _pointer;
+    }
+
+    /// @brief Returns a reference to the pointed-to value.
+    [[nodiscard]] constexpr auto value() const noexcept -> T const &
+    {
+      BORROWED_PTR_ASSERT(_pointer);
+      return *_pointer;
+    }
+
+    /// @copydoc value()
+    [[nodiscard]] constexpr auto value() noexcept -> T &
+    {
+      BORROWED_PTR_ASSERT(_pointer);
+      return *_pointer;
+    }
   };
 } // namespace ropic

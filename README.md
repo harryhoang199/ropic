@@ -16,33 +16,24 @@ A C++20 coroutine-based implementation of Railway Oriented Programming (ROP) for
 
 A function's error-handling behavior is immediately visible from its signature:
 
-**Error-propagating functions** (returns `Either`, marked `noexcept`):
+**Error-propagating & Non-propagating functions**:
 
 ```cpp
+// Error-propagating function: returns `Either`, marked `noexcept`
 // This is a wrapper of traditional try-catch.
 // It may produce errors but will never throw
-ropic::Either<Error, double> parseDouble(const std::string& s) noexcept {
+ropic::Either<double, Error> parseDouble(const std::string& s) noexcept {
     // Implementation uses co_return for both success and error paths
-  try { co_return std::stod(str); }
+  try {
+    co_return std::stod(str);
+  }
   catch (...)
   {
-    co_return Error{ErrorTag::VALIDATION, "Cannot parse '" + str + "' to double"};
+    co_return Error{"Cannot parse '" + str + "' to double"};
   }
 }
-```
 
-```cpp
-ropic::Either<Error, double> divide(double numerator, double denominator) noexcept {
-  if (denominator == 0.0)
-    co_return {ErrorTag::VALIDATION, "Cannot divide by 0"};
-
-  co_return (numerator / denominator);
-}
-```
-
-**Non-propagating function** (non-`Either` return, marked `noexcept`):
-
-```cpp
+// Non-propagating function: returns non-`Either`, marked `noexcept`
 // This function neither throws nor propagates errors
 double clamp(double value, double min, double max) noexcept {
     return std::max(min, std::min(value, max));
@@ -53,18 +44,18 @@ double clamp(double value, double min, double max) noexcept {
 
 ```cpp
 // ropic: Flat, composable, explicit error handling
-ropic::Either<Error, double> computeRatio(const std::string& a, const std::string& b) noexcept {
-    double x = co_await parseDouble(a);  // Error auto-propagates
-    double y = co_await parseDouble(b);  // Error auto-propagates
-    double z = co_await divide(x, y);    // Error auto-propagates
+ropic::Either<double, Error> computeRatioCoawait(const std::string& a, const std::string& b) noexcept {
+    double x = co_await parseDoubleCoawait(a);  // Error auto-propagates
+    double y = co_await parseDoubleCoawait(b);  // Error auto-propagates
+    double z = co_await divideCoawait(x, y);    // Error auto-propagates
     co_return z;
 }
 
 // try-catch: Hidden control flow, nested blocks
-double computeRatioTraditional(const std::string& a, const std::string& b) {
+double computeRatioTryCatch(const std::string& a, const std::string& b) {
     try {
-        double x = parseDouble(a);
-        double y = parseDouble(b);
+        double x = parseDoubleTryCatch(a);
+        double y = parseDoubleTryCatch(b);
         if (y == 0) throw std::runtime_error("Division by zero");
         return x / y;
     } catch (const std::exception& e) {
@@ -76,13 +67,13 @@ double computeRatioTraditional(const std::string& a, const std::string& b) {
 // if-else: Verbose, repetitive error checking
 std::optional<double> computeRatioIfElse(
     const std::string& a, const std::string& b, std::string& errorOut) noexcept {
-    std::optional<double> x = parseDouble(a);
+    std::optional<double> x = parseDoubleIfElse(a);
     if(!x.has_value()) {
         errorOut = "Invalid first number";
         return std::nullopt;
     }
 
-    std::optional<double> b = parseDouble(b);
+    std::optional<double> b = parseDoubleIfElse(b);
     if(!y.has_value()) {
         errorOut = "Invalid second number";
         return std::nullopt;
@@ -102,10 +93,10 @@ std::optional<double> computeRatioIfElse(
 ### Basic Either Usage
 
 ```cpp
-// Function returning Either<Error, DATA> with data or error
-ropic::Either<Error, int> divide(int a, int b) noexcept {
+// Function returning Either<DATA, Error> with data or error
+ropic::Either<int, Error> divide(int a, int b) noexcept {
     if (b == 0) {
-        co_return Error{ErrorTag::VALIDATION, "Division by zero"};
+        co_return Error{"Division by zero"};
     }
     co_return a / b;
 }
@@ -122,14 +113,19 @@ if (auto* err = result.error()) {
 ### Automatic Error Propagation with co_await
 
 ```cpp
-ropic::Either<Error, double> parseDouble(const std::string& s) noexcept;
-ropic::Either<Error, double> divide(double numerator, double denominator) noexcept;
+ropic::Either<double, Error> parseDouble(const std::string& s) noexcept;
+ropic::Either<double, Error> divide(double numerator, double denominator) noexcept;
 
-ropic::Either<Error, double> divideStr(const std::string& numStr, const std::string& denStr) noexcept {
+ropic::Either<double, Error> divideStr(const std::string& numStr, const std::string& denStr) noexcept {
     // co_await automatically extracts data or propagates errors
     double x = co_await parseDouble(numStr);
-    double y = co_await parseDouble(denStr);
-    double result = co_await divide(x, y);
+
+    // Remove co_await to catch and handle error right here
+    auto y = parseDouble(denStr);
+    if(auto err = y.error())
+        co_return *err;
+
+    double result = co_await divide(x, *(y.data()));
     co_return result;
 }
 ```
@@ -137,12 +133,12 @@ ropic::Either<Error, double> divideStr(const std::string& numStr, const std::str
 ### Chaining Multiple Operations
 
 ```cpp
-ropic::Either<Error, std::vector<int>> getWeights(std::initializer_list<int> weights) noexcept;
+ropic::Either<std::vector<int>, Error> getWeights() noexcept;
 
-ropic::Either<Error, double> compute(const std::string& a, const std::string& b) noexcept {
-    std::vector<int> weights = co_await getWeights({1, 5});
+ropic::Either<double, Error> compute(const std::string& a, const std::string& b) noexcept {
+    std::vector<int> weights = co_await getWeights();
     if (weights.size() < 2)
-        co_return Error{ErrorTag::VALIDATION, "Need at least 2 weights"};
+        co_return Error{"Need at least 2 weights"};
 
     double x = co_await parseDouble(a);
     double y = co_await parseDouble(b);
@@ -153,9 +149,9 @@ ropic::Either<Error, double> compute(const std::string& a, const std::string& b)
 ### Void Specialization for Error-Only Operations
 
 ```cpp
-ropic::Either<Error, Void> saveConfig(const Config& cfg) noexcept {
+ropic::Either<Void, Error> saveConfig(const Config& cfg) noexcept {
     if (!validateConfig(cfg)) {
-        co_return Error{ErrorTag::VALIDATION, "Invalid configuration"};
+        co_return Error{"Invalid configuration"};
     }
     writeToFile(cfg);
     co_return OK;  // Success, no data (use OK or VOID constant)
@@ -211,8 +207,8 @@ include(FetchContent)
 
 FetchContent_Declare(
   ropic
-  GIT_REPOSITORY https://github.com/harryhoang/ropic.git
-  GIT_TAG        v0.1.0
+  GIT_REPOSITORY https://github.com/harryhoang199/ropic.git
+  GIT_TAG        main
 )
 
 FetchContent_MakeAvailable(ropic)
@@ -226,7 +222,7 @@ target_link_libraries(your_target PRIVATE ropic::ropic)
 Clone or copy the repository into your project:
 
 ```bash
-git clone https://github.com/user/ropic.git external/ropic
+git clone https://github.com/harryhoang199/ropic.git external/ropic
 ```
 
 Then in your `CMakeLists.txt`:
@@ -253,7 +249,7 @@ target_link_libraries(my_app PRIVATE ropic::ropic)
 Then include the headers in your code:
 
 ```cpp
-#include <ropic.hpp>           // Main header
+#include <ropic>           // Main header
 #include <ropic/version.hpp>   // Version info (optional)
 
 int main() {
@@ -264,15 +260,15 @@ int main() {
 
 ## CMake Options
 
-| Option           | Default | Description                  |
-| ---------------- | ------- | ---------------------------- |
-| `BUILD_EXAMPLES` | `OF`    | Build example executable     |
-| `BUILD_TESTING`  | `OF`    | Build tests (requires GTest) |
+| Option                 | Default | Description                  |
+| ---------------------- | ------- | ---------------------------- |
+| `ROPIC_BUILD_EXAMPLES` | `OFF`   | Build example executable     |
+| `ROPIC_BUILD_TESTING`  | `OFF`   | Build tests (requires GTest) |
 
 Example:
 
 ```bash
-cmake -B build -DBUILD_EXAMPLES=ON -DBUILD_TESTING=ON
+cmake -B build -DROPIC_BUILD_EXAMPLES=ON -DROPIC_BUILD_TESTING=ON
 ```
 
 ## Building Examples and Tests
@@ -285,8 +281,8 @@ cmake -B build
 cmake --build build --config Debug
 
 # Run example
-./build/bin/Debug/ropic_example      # Linux/macOS
-.\build\bin\Debug\ropic_example.exe  # Windows
+./build/bin/Debug/ropic_examples      # Linux/macOS
+.\build\bin\Debug\ropic_examples.exe  # Windows
 
 # Run tests
 ./build/bin/Debug/either-tests       # Linux/macOS
