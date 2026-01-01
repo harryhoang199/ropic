@@ -95,6 +95,7 @@ std::optional<double> computeRatioIfElse(
 ```cpp
 // Function returning Either<DATA, Error> with data or error
 ropic::Either<int, Error> divide(int a, int b) noexcept {
+    // co_return an `int` or an `Error`
     if (b == 0) {
         co_return Error{"Division by zero"};
     }
@@ -136,6 +137,8 @@ ropic::Either<double, Error> divideStr(const std::string& numStr, const std::str
 ropic::Either<std::vector<int>, Error> getWeights() noexcept;
 
 ropic::Either<double, Error> compute(const std::string& a, const std::string& b) noexcept {
+    // Use `co_await` with the `Either` template with a different `DATA` type
+    // (the `ERROR` types must be the same)
     std::vector<int> weights = co_await getWeights();
     if (weights.size() < 2)
         co_return Error{"Need at least 2 weights"};
@@ -149,12 +152,12 @@ ropic::Either<double, Error> compute(const std::string& a, const std::string& b)
 ### Void Specialization for Error-Only Operations
 
 ```cpp
-ropic::Either<Void, Error> saveConfig(const Config& cfg) noexcept {
+ropic::Either<ropic::Void, Error> saveConfig(const Config& cfg) noexcept {
     if (!validateConfig(cfg)) {
         co_return Error{"Invalid configuration"};
     }
     writeToFile(cfg);
-    co_return OK;  // Success, no data (use OK or VOID constant)
+    co_return ropic::OK;  // Success, no data (use OK or VOID constant)
 }
 
 auto result = saveConfig(config);
@@ -162,17 +165,6 @@ if (auto* err = result.error()) {
     std::cerr << "Save failed: " << err->message() << '\n';
 } else {
     std::cout << "Saved successfully\n";
-}
-```
-
-### Checking State
-
-```cpp
-auto result = divide(10, 2);
-if (auto* val = result.data()) {
-    // Use *val
-} else if (auto* err = result.error()) {
-    // Handle *err
 }
 ```
 
@@ -249,7 +241,7 @@ target_link_libraries(my_app PRIVATE ropic::ropic)
 Then include the headers in your code:
 
 ```cpp
-#include <ropic>           // Main header
+#include <ropic>               // Main header
 #include <ropic/version.hpp>   // Version info (optional)
 
 int main() {

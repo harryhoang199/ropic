@@ -22,28 +22,28 @@ namespace ropic
    * being immovable. Debug builds assert on null dereference.
    *
    * @tparam T The pointed-to type. Must not be a reference type.
-   * @warning The pointed-to object must outlive the Borrow instance.
+   * @warning The pointed-to object must outlive the Borrower instance.
    *
    * @code
-   * if (Borrow<Error> err = result.error()) {
+   * if (Borrower<Error> err = result.error()) {
    *     std::cout << err->message() << "\n";
    * }
    * @endcode
    */
   template <typename T>
     requires(!std::is_reference_v<T>)
-  class Borrow
+  class Borrower
   {
     T *_pointer;
 
   public:
-    /// @brief Constructs a Borrow from a raw pointer (may be nullptr).
-    explicit Borrow(T *pointer) noexcept : _pointer(pointer) {}
+    /// @brief Constructs a Borrower from a raw pointer (may be nullptr).
+    explicit Borrower(T *pointer) noexcept : _pointer(pointer) {}
 
-    Borrow(Borrow const &) = delete;
-    Borrow(Borrow &&) = delete;
-    auto operator=(Borrow const &) -> Borrow & = delete;
-    auto operator=(Borrow &&) -> Borrow & = delete;
+    Borrower(Borrower const &) = delete;
+    Borrower(Borrower &&) = delete;
+    auto operator=(Borrower const &) -> Borrower & = delete;
+    auto operator=(Borrower &&) -> Borrower & = delete;
 
     /// @brief Returns true if the pointer is non-null.
     [[nodiscard]] constexpr explicit operator bool() const noexcept

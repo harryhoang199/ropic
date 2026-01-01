@@ -4,7 +4,7 @@
 #pragma once
 
 #include "EitherPromise.inl"
-#include "Borrow.hpp"
+#include "Borrower.hpp"
 #include <cassert>
 
 namespace ropic
@@ -30,7 +30,7 @@ namespace ropic
    * - **Value Mode**: Direct container for error/data.
    * - **Coroutine Mode**: Return type for coroutines; values stored in promise.
    *
-   * @warning The `data()` and `error()` methods return Borrow pointers that become
+   * @warning The `data()` and `error()` methods return Borrower pointers that become
    *          dangling after the Either object is destroyed or moved.
    *
    * @code
@@ -133,30 +133,30 @@ namespace ropic
     // ==========================================
 
     /**
-     * @brief Returns optional reference to error if present, empty Borrow otherwise.
-     * @return Borrow<ERROR> containing error reference, or empty Borrow.
-     * @warning Returned Borrow becomes dangling after Either is destroyed or moved.
+     * @brief Returns optional reference to error if present, empty Borrower otherwise.
+     * @return Borrower<ERROR> containing error reference, or empty Borrower.
+     * @warning Returned Borrower becomes dangling after Either is destroyed or moved.
      *
      * For coroutine mode, extracts result from promise on first access.
      */
-    [[nodiscard]] auto error() noexcept -> Borrow<ERROR>
+    [[nodiscard]] auto error() noexcept -> Borrower<ERROR>
     {
       updateResult();
-      return Borrow<ERROR>{std::get_if<ERROR>(&_result)};
+      return Borrower<ERROR>{std::get_if<ERROR>(&_result)};
     }
 
     /**
-     * @brief Returns optional reference to data if present, empty Borrow otherwise.
-     * @return Borrow<DATA> containing data reference, or empty Borrow.
-     * @warning Returned Borrow becomes dangling after Either is destroyed or moved.
+     * @brief Returns optional reference to data if present, empty Borrower otherwise.
+     * @return Borrower<DATA> containing data reference, or empty Borrower.
+     * @warning Returned Borrower becomes dangling after Either is destroyed or moved.
      *
      * For coroutine mode, extracts result from promise on first access.
      */
-    [[nodiscard]] auto data() noexcept -> Borrow<DATA>
+    [[nodiscard]] auto data() noexcept -> Borrower<DATA>
       requires(!std::is_same_v<DATA, Void>)
     {
       updateResult();
-      return Borrow<DATA>{std::get_if<DATA>(&_result)};
+      return Borrower<DATA>{std::get_if<DATA>(&_result)};
     }
   };
 }
