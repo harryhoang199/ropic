@@ -7,7 +7,7 @@
   },
   "configurePresets": [
     {
-      "name": "vs2022",
+      "name": "config-vs2022",
       "displayName": "MSVC 2022",
       "description": "Use MSVC for Debug and Release builds",
       "generator": "Visual Studio 17 2022",
@@ -16,11 +16,12 @@
         "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
         "ROPIC_BUILD_EXAMPLES": "ON",
-        "ROPIC_BUILD_TESTING": "ON"
+        "ROPIC_BUILD_TESTING": "ON",
+        "ROPIC_BUILD_BENCHMARKS": "ON"
       }
     },
     {
-      "name": "gcc-debug",
+      "name": "config-gcc-debug",
       "displayName": "GCC Debug",
       "description": "Use GCC in Debug mode with debug info",
       "generator": "Ninja",
@@ -29,12 +30,14 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_C_COMPILER": "gcc",
         "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
         "ROPIC_BUILD_EXAMPLES": "ON",
-        "ROPIC_BUILD_TESTING": "ON"
+        "ROPIC_BUILD_TESTING": "ON",
+        "ROPIC_BUILD_BENCHMARKS": "ON"
       }
     },
     {
-      "name": "gcc-release",
+      "name": "config-gcc-release",
       "displayName": "GCC Release",
       "description": "Use GCC in Release mode with optimizations",
       "generator": "Ninja",
@@ -43,12 +46,14 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_C_COMPILER": "gcc",
         "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
         "ROPIC_BUILD_EXAMPLES": "ON",
-        "ROPIC_BUILD_TESTING": "ON"
+        "ROPIC_BUILD_TESTING": "ON",
+        "ROPIC_BUILD_BENCHMARKS": "ON"
       }
     },
     {
-      "name": "clang-debug",
+      "name": "config-clang-debug",
       "displayName": "Clang Debug",
       "description": "Use Clang in Debug mode with debug info and sanitizers",
       "generator": "Ninja",
@@ -57,13 +62,15 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_C_COMPILER": "clang",
         "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
         "ROPIC_BUILD_EXAMPLES": "ON",
-        "ROPIC_BUILD_TESTING": "ON"
+        "ROPIC_BUILD_TESTING": "ON",
+        "ROPIC_BUILD_BENCHMARKS": "ON"
       }
     },
     {
-      "name": "clang-release",
+      "name": "config-clang-release",
       "displayName": "Clang Release",
       "description": "Use Clang in Release mode with optimizations and ThinLTO",
       "generator": "Ninja",
@@ -72,16 +79,49 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_C_COMPILER": "clang",
         "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
         "ROPIC_BUILD_EXAMPLES": "ON",
-        "ROPIC_BUILD_TESTING": "ON"
+        "ROPIC_BUILD_TESTING": "ON",
+        "ROPIC_BUILD_BENCHMARKS": "ON"
+      }
+    },
+    {
+      "name": "config-gcc-ci",
+      "displayName": "GCC CI",
+      "description": "GCC Release for CI (no ccache)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/gcc-ci",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "ROPIC_BUILD_EXAMPLES": "ON",
+        "ROPIC_BUILD_TESTING": "ON",
+        "ROPIC_BUILD_BENCHMARKS": "ON"
+      }
+    },
+    {
+      "name": "config-clang-ci",
+      "displayName": "Clang CI",
+      "description": "Clang Release for CI (no ccache)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/clang-ci",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
+        "ROPIC_BUILD_EXAMPLES": "ON",
+        "ROPIC_BUILD_TESTING": "ON",
+        "ROPIC_BUILD_BENCHMARKS": "ON"
       }
     }
   ],
   "buildPresets": [
     {
       "name": "build-vs2022-debug",
-      "configurePreset": "vs2022",
+      "configurePreset": "config-vs2022",
       "configuration": "Debug",
       "description": "Build with MSVC in Debug mode",
       "inherits": [],
@@ -90,7 +130,7 @@
     },
     {
       "name": "build-vs2022-release",
-      "configurePreset": "vs2022",
+      "configurePreset": "config-vs2022",
       "configuration": "Release",
       "description": "Build with MSVC in Release mode",
       "inherits": [],
@@ -99,7 +139,7 @@
     },
     {
       "name": "build-gcc-debug",
-      "configurePreset": "gcc-debug",
+      "configurePreset": "config-gcc-debug",
       "description": "Build with GCC in Debug mode",
       "inherits": [],
       "jobs": 8,
@@ -107,7 +147,7 @@
     },
     {
       "name": "build-gcc-release",
-      "configurePreset": "gcc-release",
+      "configurePreset": "config-gcc-release",
       "description": "Build with GCC in Release mode",
       "inherits": [],
       "jobs": 8,
@@ -115,7 +155,7 @@
     },
     {
       "name": "build-clang-debug",
-      "configurePreset": "clang-debug",
+      "configurePreset": "config-clang-debug",
       "description": "Build with Clang in Debug mode",
       "inherits": [],
       "jobs": 8,
@@ -123,8 +163,24 @@
     },
     {
       "name": "build-clang-release",
-      "configurePreset": "clang-release",
+      "configurePreset": "config-clang-release",
       "description": "Build with Clang in Release mode",
+      "inherits": [],
+      "jobs": 8,
+      "verbose": false
+    },
+    {
+      "name": "build-gcc-ci",
+      "configurePreset": "config-gcc-ci",
+      "description": "Build with GCC for CI",
+      "inherits": [],
+      "jobs": 8,
+      "verbose": false
+    },
+    {
+      "name": "build-clang-ci",
+      "configurePreset": "config-clang-ci",
+      "description": "Build with Clang for CI",
       "inherits": [],
       "jobs": 8,
       "verbose": false
@@ -132,8 +188,87 @@
   ],
   "testPresets": [
     {
-      "name": "default",
-      "configurePreset": "vs2022",
+      "name": "test-vs2022",
+      "configurePreset": "config-vs2022",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "environment": {
+        "GTEST_COLOR": "1"
+      },
+      "execution": {
+        "jobs": 8
+      }
+    },
+    {
+      "name": "test-gcc-debug",
+      "configurePreset": "config-gcc-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "environment": {
+        "GTEST_COLOR": "1"
+      },
+      "execution": {
+        "jobs": 8
+      }
+    },
+    {
+      "name": "test-gcc-release",
+      "configurePreset": "config-gcc-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "environment": {
+        "GTEST_COLOR": "1"
+      },
+      "execution": {
+        "jobs": 8
+      }
+    },
+    {
+      "name": "test-clang-debug",
+      "configurePreset": "config-clang-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "environment": {
+        "GTEST_COLOR": "1"
+      },
+      "execution": {
+        "jobs": 8
+      }
+    },
+    {
+      "name": "test-clang-release",
+      "configurePreset": "config-clang-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "environment": {
+        "GTEST_COLOR": "1"
+      },
+      "execution": {
+        "jobs": 8
+      }
+    },
+    {
+      "name": "test-gcc-ci",
+      "configurePreset": "config-gcc-ci",
+      "output": {
+        "outputOnFailure": true
+      },
+      "environment": {
+        "GTEST_COLOR": "1"
+      },
+      "execution": {
+        "jobs": 8
+      }
+    },
+    {
+      "name": "test-clang-ci",
+      "configurePreset": "config-clang-ci",
       "output": {
         "outputOnFailure": true
       },

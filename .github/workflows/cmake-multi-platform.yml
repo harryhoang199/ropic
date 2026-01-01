@@ -1,0 +1,41 @@
+# CMake workflow using presets for multiple platforms
+name: CMake on multiple platforms
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            configure_preset: config-vs2022
+            build_preset: build-vs2022-release
+            test_preset: test-vs2022
+          - os: ubuntu-latest
+            configure_preset: config-gcc-ci
+            build_preset: build-gcc-ci
+            test_preset: test-gcc-ci
+          - os: ubuntu-latest
+            configure_preset: config-clang-ci
+            build_preset: build-clang-ci
+            test_preset: test-clang-ci
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: cmake --preset ${{ matrix.configure_preset }}
+
+    - name: Build
+      run: cmake --build --preset ${{ matrix.build_preset }}
+
+    - name: Test
+      run: ctest --preset ${{ matrix.test_preset }}

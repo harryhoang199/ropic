@@ -11,7 +11,22 @@ project(ropic
   LANGUAGES CXX
 )
 
-cmake_policy(SET CMP0167 NEW)
+# cmake_policy(SET CMP0167 NEW)
+
+
+#  CHECK FOR GIT (Required on ALL platforms for FetchContent) ---
+find_package(Git QUIET)
+if(NOT GIT_FOUND)
+    message(FATAL_ERROR 
+        "\n\n"
+        "------------------------------------------------------------------\n"
+        " [!] ERROR: 'git' is not found in your PATH.\n"
+        "     CMake needs git to download Google Test/Benchmark.\n\n"
+        " [>] Windows: Install Git for Windows.\n"
+        " [>] Linux:   sudo apt install git\n"
+        "------------------------------------------------------------------\n"
+    )
+endif()
 
 # Set output directories (multi-config generators like VS append Debug/Release automatically)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -443,6 +458,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "
   # Clang: Debug Configuration
   #############################################################################
   add_compile_options(
+    $<$<CONFIG:Debug>:-Rpass=coro-elide>      # 
     # === Debug: Optimization ===
     $<$<CONFIG:Debug>:-O0>      # No optimization for accurate debugging
 
@@ -557,12 +573,20 @@ target_include_directories(ropic INTERFACE
 ###############################################################################
 option(ROPIC_BUILD_EXAMPLES "Build example executable" OFF)
 option(ROPIC_BUILD_TESTING "Build tests" OFF)
+option(ROPIC_BUILD_BENCHMARKS "Build performance benchmarks" OFF)
 
 ###############################################################################
 # Activate testing if ROPIC_BUILD_TESTING is ON                                     #
 ###############################################################################
 if(ROPIC_BUILD_TESTING)
   add_subdirectory(tests)
+endif()
+
+###############################################################################
+# Activate benchmarks if ROPIC_BUILD_BENCHMARKS is ON                         #
+###############################################################################
+if(ROPIC_BUILD_BENCHMARKS)
+  add_subdirectory(benchmark)
 endif()
 
 ###############################################################################

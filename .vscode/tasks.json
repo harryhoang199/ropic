@@ -34,28 +34,34 @@
     {
       "label": "build:gcc-debug",
       "type": "shell",
-      "command": "cmake --build --preset build-gcc-debug",
+      "command": "cmake --build --preset build-gcc-debug --clean-first",
       "group": "build",
       "problemMatcher": "$gcc"
     },
     {
       "label": "build:gcc-release",
       "type": "shell",
-      "command": "cmake --build --preset build-gcc-release",
+      "command": "cmake --build --preset build-gcc-release --clean-first",
       "group": "build",
       "problemMatcher": "$gcc"
     },
     {
       "label": "rebuild:gcc-debug",
       "type": "shell",
-      "command": "cmake --build --preset build-gcc-debug --clean-first",
+      "command": "rm -rf ${workspaceFolder}/build/gcc-debug && cmake --preset config-gcc-debug && cmake --build --preset build-gcc-debug",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": "build",
       "problemMatcher": "$gcc"
     },
     {
       "label": "rebuild:gcc-release",
       "type": "shell",
-      "command": "cmake --build --preset build-gcc-release --clean-first",
+      "command": "rm -rf ${workspaceFolder}/build/gcc-release && cmake --preset config-gcc-release && cmake --build --preset build-gcc-release",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": "build",
       "problemMatcher": "$gcc"
     },
@@ -63,28 +69,34 @@
     {
       "label": "build:clang-debug",
       "type": "shell",
-      "command": "cmake --build --preset build-clang-debug",
+      "command": "cmake --build --preset build-clang-debug --clean-first",
       "group": "build",
       "problemMatcher": "$gcc"
     },
     {
       "label": "build:clang-release",
       "type": "shell",
-      "command": "cmake --build --preset build-clang-release",
+      "command": "cmake --build --preset build-clang-release --clean-first",
       "group": "build",
       "problemMatcher": "$gcc"
     },
     {
       "label": "rebuild:clang-debug",
       "type": "shell",
-      "command": "cmake --build --preset build-clang-debug --clean-first",
+      "command": "rm -rf ${workspaceFolder}/build/clang-debug && cmake --preset config-clang-debug && cmake --build --preset build-clang-debug --clean-first",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": "build",
       "problemMatcher": "$gcc"
     },
     {
       "label": "rebuild:clang-release",
       "type": "shell",
-      "command": "cmake --build --preset build-clang-release --clean-first",
+      "command": "rm -rf ${workspaceFolder}/build/clang-release && cmake --preset config-clang-release && cmake --build --preset build-clang-release --clean-first",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": "build",
       "problemMatcher": "$gcc"
     }
