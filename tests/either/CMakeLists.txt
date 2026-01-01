@@ -8,9 +8,7 @@ project(either-tests LANGUAGES CXX)
 ###############################################################################
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
   *.cpp
-  *.h
-  #"${CMAKE_SOURCE_DIR}/src/*.cpp"
-  #"${CMAKE_SOURCE_DIR}/src/core/*.h"
+  *.hpp
 )
 
 ###############################################################################
