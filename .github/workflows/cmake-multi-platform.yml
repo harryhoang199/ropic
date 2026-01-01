@@ -1,4 +1,3 @@
-# CMake workflow using presets for multiple platforms
 name: CMake on multiple platforms
 
 on:
@@ -31,8 +30,21 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    # Install Clang 18 (or 19 depending on choice)
+    # Only run this step if the current matrix job is for Clang
+    - name: Install LLVM and Clang
+      if: matrix.configure_preset == 'config-clang-ci'
+      uses: KyleMayes/install-llvm-action@v2
+      with:
+        version: "18.1.3"  # Specific version to avoid compatibility issues
+        env: true          # Automatically set CC=clang and CXX=clang++ environment variables
+        cached: true       # (Default is true) Speed up subsequent runs by avoiding re-download
+
     - name: Configure CMake
-      run: cmake --preset ${{ matrix.configure_preset }}
+      # We conditionally append the linker flag only for Clang build to avoid LTO errors
+      run: >
+        cmake --preset ${{ matrix.configure_preset }}
+        ${{ matrix.configure_preset == 'config-clang-ci' && '-DCMAKE_CXX_FLAGS=-fuse-ld=lld' || '' }}
 
     - name: Build
       run: cmake --build --preset ${{ matrix.build_preset }}
