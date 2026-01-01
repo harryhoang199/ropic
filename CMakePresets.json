@@ -83,7 +83,7 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
         "ROPIC_BUILD_EXAMPLES": "ON",
         "ROPIC_BUILD_TESTING": "ON",
-        "ROPIC_BUILD_BENCHMARKS": "ON"
+        "ROPIC_BUILD_BENCHMARKS": "OFF"
       }
     },
     {
@@ -98,7 +98,7 @@
         "CMAKE_CXX_COMPILER": "g++",
         "ROPIC_BUILD_EXAMPLES": "ON",
         "ROPIC_BUILD_TESTING": "ON",
-        "ROPIC_BUILD_BENCHMARKS": "ON"
+        "ROPIC_BUILD_BENCHMARKS": "OFF"
       }
     },
     {
@@ -114,7 +114,7 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
         "ROPIC_BUILD_EXAMPLES": "ON",
         "ROPIC_BUILD_TESTING": "ON",
-        "ROPIC_BUILD_BENCHMARKS": "ON"
+        "ROPIC_BUILD_BENCHMARKS": "OFF"
       }
     }
   ],
