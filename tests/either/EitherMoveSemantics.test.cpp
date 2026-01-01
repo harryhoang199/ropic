@@ -54,7 +54,15 @@ TEST(EitherMoveSemantics, UNIT_008_SelfMoveAssign)
   RecordProperty("desc", "Self-move-assignment does not crash");
 
   Either<int, std::string> e{42};
+  // Intentionally testing self-move-assignment behavior
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wself-move"
+#endif
   e = std::move(e);
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
   SUCCEED();
 }
 

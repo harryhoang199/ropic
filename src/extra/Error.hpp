@@ -87,7 +87,7 @@ namespace ropic
      * @param code Optional error code for handling strategy (defaults to unsigned(-1)).
      */
     Error(ErrorTag tag, std::string message, unsigned code = unsigned(-1))
-        : _tag(tag), _message(std::move(message)), _code(code)
+        : _message(std::move(message)), _tag(tag), _code(code)
     {
     }
 

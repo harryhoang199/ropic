@@ -57,7 +57,7 @@ namespace ropic
    */
   template <detail::plain_value_type DATA, detail::plain_value_type ERROR>
     requires(!std::is_same_v<DATA, ERROR>)
-  class Either
+  class ROPIC_CORO_AWAIT_ELIDABLE Either
   {
     using Handle = std::coroutine_handle<detail::EitherPromise<DATA, ERROR, Either>>;
     Handle _handle;                                    ///< Coroutine handle (null in value mode)

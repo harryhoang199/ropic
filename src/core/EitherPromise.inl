@@ -3,9 +3,11 @@
 
 #pragma once
 
+#include "Attributes.hpp"
 #include "Void.hpp"
 #include "EitherAwaiter.inl"
 #include <cassert>
+#include <exception>
 
 namespace ropic::detail
 {
@@ -24,36 +26,36 @@ namespace ropic::detail
     std::variant<std::monostate, DATA, ERROR> result; ///< Stores monostate, data, or error
 
     /// @brief Creates Either bound to this promise's coroutine handle.
-    [[nodiscard]] auto get_return_object() noexcept -> EITHER<DATA, ERROR>
+    [[nodiscard]] ROPIC_FORCEINLINE auto get_return_object() noexcept -> EITHER<DATA, ERROR>
       requires std::constructible_from<EITHER<DATA, ERROR>, std::coroutine_handle<EitherPromise>>
     {
       return EITHER{std::coroutine_handle<EitherPromise>::from_promise(*this)};
     }
 
     /// @brief Starts execution immediately (no initial suspend).
-    [[nodiscard]] auto initial_suspend() noexcept -> std::suspend_never { return {}; }
+    [[nodiscard]] ROPIC_FORCEINLINE auto initial_suspend() noexcept -> std::suspend_never { return {}; }
 
     /// @brief Handles co_return with a DATA value.
-    void return_value(DATA value) noexcept(std::is_nothrow_move_assignable_v<DATA>)
+    ROPIC_FORCEINLINE void return_value(DATA value) noexcept(std::is_nothrow_move_assignable_v<DATA>)
     {
       result = std::move(value);
     }
 
     /// @brief Handles co_return with an ERROR value.
-    void return_value(ERROR value) noexcept(std::is_nothrow_move_assignable_v<ERROR>)
+    ROPIC_FORCEINLINE void return_value(ERROR value) noexcept(std::is_nothrow_move_assignable_v<ERROR>)
     {
       result = std::move(value);
     }
 
     /// @brief Suspends at coroutine end.
-    [[nodiscard]] auto final_suspend() noexcept -> std::suspend_always { return {}; }
+    [[nodiscard]] ROPIC_FORCEINLINE auto final_suspend() noexcept -> std::suspend_always { return {}; }
 
     /// @brief Terminates on unhandled exceptions.
-    void unhandled_exception() noexcept { std::terminate(); }
+    ROPIC_FORCEINLINE void unhandled_exception() noexcept { std::terminate(); }
 
     /// @brief Transforms co_await expressions for Either types.
     template <typename AWAITED>
-    [[nodiscard]] auto await_transform(EITHER<AWAITED, ERROR> awaitable) noexcept
+    [[nodiscard]] ROPIC_FORCEINLINE auto await_transform(EITHER<AWAITED, ERROR> awaitable) noexcept
         -> EitherAwaiter<AWAITED, ERROR, EitherPromise>
     {
       if (auto err = awaitable.error())
