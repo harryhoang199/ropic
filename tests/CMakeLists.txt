@@ -28,7 +28,7 @@ FetchContent_MakeAvailable(googletest)
 # Suppress warnings for external GoogleTest library (not our code)
 # These are GCC/Clang flags, only needed on non-MSVC compilers
 if(NOT MSVC)
-  set(CONFIG_GTEST_COMPILE_OPTIONS 
+  set(CONFIG_GTEST_COMPILE_OPTIONS
       -Wno-double-promotion
       -Wno-useless-cast
   )
@@ -39,8 +39,6 @@ if(NOT MSVC)
     target_compile_options(gtest_main PRIVATE ${CONFIG_GTEST_COMPILE_OPTIONS})
   endif()
 endif()
-
-enable_testing()
 
 ###############################################################################
 # Add executable and link libraries                                           #

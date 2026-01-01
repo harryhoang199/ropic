@@ -29,10 +29,10 @@ target_link_libraries(either-tests PRIVATE
 # This will automatically discover tests in the either-tests executable      #
 # and run them when using `ctest` or `make test`                              #
 ###############################################################################
-# include(GoogleTest)
-# gtest_discover_tests(either-tests  
-  # EXTRA_ARGS --gtest_color=yes
-# )
+include(GoogleTest)
+gtest_discover_tests(either-tests
+  EXTRA_ARGS --gtest_color=yes
+)
 
 ###############################################################################
 # Flags for sanitizer                                                         #

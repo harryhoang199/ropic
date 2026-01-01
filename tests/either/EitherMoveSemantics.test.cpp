@@ -55,12 +55,17 @@ TEST(EitherMoveSemantics, UNIT_008_SelfMoveAssign)
 
   Either<int, std::string> e{42};
   // Intentionally testing self-move-assignment behavior
-#if defined(__GNUC__) && !defined(__clang__)
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-move"
+#elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wself-move"
 #endif
   e = std::move(e);
-#if defined(__GNUC__) && !defined(__clang__)
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
   SUCCEED();

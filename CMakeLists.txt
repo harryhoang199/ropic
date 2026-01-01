@@ -579,6 +579,7 @@ option(ROPIC_BUILD_BENCHMARKS "Build performance benchmarks" OFF)
 # Activate testing if ROPIC_BUILD_TESTING is ON                                     #
 ###############################################################################
 if(ROPIC_BUILD_TESTING)
+  enable_testing()
   add_subdirectory(tests)
 endif()
 
