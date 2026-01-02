@@ -19,8 +19,24 @@ void printError(const Error &err)
   std::cout << "[FAIL] " << err.message() << " (tag: " << toString(err.tag()) << ")\n";
 }
 
+void f() { std::cout << "\nRunning f()\n"; }
+template <void (*func)()>
+struct MyTess
+{
+  void execute() { func(); }
+};
+
 int main()
 {
+  MyTess<f> test1;
+  test1.execute();
+
+  auto lambda = []()
+  { std::cout << "\nRunning lambda()\n"; };
+
+  MyTess<lambda> test2;
+  test2.execute();
+
   std::cout << "=== Testing Railway Oriented Programming ===\n\n";
 
   // ==========================================

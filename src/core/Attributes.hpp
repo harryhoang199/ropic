@@ -35,7 +35,7 @@
 //
 // Empty on non-Clang compilers as this is a Clang extension.
 
-#if defined(__clang__) && __clang_major__ >= 18 && __has_cpp_attribute(clang::coro_await_elidable)
+#if defined(__clang__) && __has_cpp_attribute(clang::coro_await_elidable)
 #define ROPIC_CORO_AWAIT_ELIDABLE [[clang::coro_await_elidable]]
 #define ROPIC_HAS_CORO_ELISION_HINTS 1
 #else

@@ -15,9 +15,9 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            configure_preset: config-vs2022
-            build_preset: build-vs2022-release
-            test_preset: test-vs2022
+            configure_preset: config-vs2022-ci
+            build_preset: build-vs2022-ci
+            test_preset: test-vs2022-ci
           - os: ubuntu-latest
             configure_preset: config-gcc-ci
             build_preset: build-gcc-ci
@@ -36,7 +36,7 @@ jobs:
       if: matrix.configure_preset == 'config-clang-ci'
       uses: KyleMayes/install-llvm-action@v2
       with:
-        version: "18.1.3"  # Specific version to avoid compatibility issues
+        version: "18"      # Specific version to avoid compatibility issues
         env: true          # Automatically set CC=clang and CXX=clang++ environment variables
         cached: true       # (Default is true) Speed up subsequent runs by avoiding re-download
 

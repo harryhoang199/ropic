@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/extra/Result.hpp"
+#include "Result.hpp"
 #include <cmath>
 #include <iostream>
 #include <string>

@@ -4,7 +4,7 @@
 #pragma once
 
 #include "Error.hpp"
-#include "core/Either.hpp"
+#include <ropic.hpp>
 
 namespace ropic
 {

@@ -591,27 +591,10 @@ if(ROPIC_BUILD_BENCHMARKS)
 endif()
 
 ###############################################################################
-# Example Executable (optional)                                               #
+# Activate examples if ROPIC_BUILD_EXAMPLES is ON                             #
 ###############################################################################
 if(ROPIC_BUILD_EXAMPLES)
-  add_executable(ropic_examples
-    main.cpp
-  )
-
-  target_compile_features(ropic_examples PRIVATE cxx_std_20)
-  target_link_libraries(ropic_examples PRIVATE ropic)
-endif()
-
-
-###############################################################################
-# Add necessary macros for example executable                                 #
-###############################################################################
-if(ROPIC_BUILD_EXAMPLES)
-  target_compile_definitions(ropic_examples PRIVATE
-    $<$<CONFIG:Debug>:_DEBUG> #Macro _DEBUG
-    $<$<CONFIG:Release>:NDEBUG> #Macro NDEBUG for disabling assert()
-    $<$<PLATFORM_ID:Windows>:_WIN32_WINNT=0x0601> #Macro _WIN32_WINNT
-  )
+  add_subdirectory(examples)
 endif()
 
 ###############################################################################
@@ -675,13 +658,6 @@ install(
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ropic
 )
 
-# Optionally install example executable
-if(ROPIC_BUILD_EXAMPLES)
-  install(
-    TARGETS ropic_examples
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  )
-endif()
 
 
 ###############################################################################
