@@ -13,169 +13,35 @@
     }
   ],
   "configurations": [
-    // MSVC
+    // MSVC (Windows only - requires cpptools extension)
     {
       "name": "MSVC Debug",
       "type": "cppvsdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build/msvc2022/bin/Debug/ropic_examples",
+      "program": "${command:cmake.launchTargetPath}",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "preLaunchTask": "${input:buildType}:vs2022-debug"
     },
     {
       "name": "MSVC Release",
-      "type": "cppdbg",
+      "type": "cppvsdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build/msvc2022/bin/Release/ropic_examples",
+      "program": "${command:cmake.launchTargetPath}",
       "cwd": "${workspaceFolder}",
-      "preLaunchTask": "${input:buildType}:vs2022-release",
-      "windows": {
-        "type": "cppvsdbg",
-        "console": "integratedTerminal",
-        "program": "${workspaceFolder}/build/msvc2022/bin/Debug/ropic_examples.exe", // Thêm .exe cho Windows
-        "preLaunchTask": "${input:buildType}:vs2022-debug"
+      "console": "integratedTerminal",
+      "preLaunchTask": "${input:buildType}:vs2022-release"
+    },
+    // Linux OS (using CodeLLDB)
+    {
+      "name": "Launch Target (Linux)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${command:cmake.launchTargetPath}",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "ASAN_OPTIONS": "detect_leaks=0"
       }
     },
-    // GCC
-    {
-      "name": "GCC Debug",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/gcc-debug/bin/ropic_examples",
-      "cwd": "${workspaceFolder}",
-      "externalConsole": false,
-      "preLaunchTask": "${input:buildType}:gcc-debug",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb"
-    },
-    {
-      "name": "GCC Release",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/gcc-release/bin/ropic_examples",
-      "cwd": "${workspaceFolder}",
-      "externalConsole": false,
-      "preLaunchTask": "${input:buildType}:gcc-release",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb"
-    },
-    // Clang (using GDB - more reliable on Windows than LLDB)
-    {
-      "name": "Clang Debug",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/clang-debug/bin/ropic_examples",
-      "cwd": "${workspaceFolder}",
-      "externalConsole": false,
-      "preLaunchTask": "${input:buildType}:clang-debug",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb"
-    },
-    {
-      "name": "Clang Release",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/clang-release/bin/ropic_examples",
-      "cwd": "${workspaceFolder}",
-      "externalConsole": false,
-      "preLaunchTask": "${input:buildType}:clang-release",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb"
-    },
-    // Tests
-    {
-      "name": "MSVC Tests Debug",
-      "type": "cppvsdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/msvc2022/bin/Debug/either-tests",
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "preLaunchTask": "${input:buildType}:vs2022-debug"
-    },
-    {
-      "name": "GCC Tests Debug",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/gcc-debug/bin/either-tests",
-      "cwd": "${workspaceFolder}",
-      "externalConsole": false,
-      "preLaunchTask": "${input:buildType}:gcc-debug",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb"
-    },
-    {
-      "name": "Clang Tests Debug",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/clang-debug/bin/either-tests",
-      "cwd": "${workspaceFolder}",
-      "externalConsole": false,
-      "preLaunchTask": "${input:buildType}:clang-debug",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb"
-    },
-    {
-      "name": "MSVC Tests Release",
-      "type": "cppvsdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/msvc2022/bin/Release/either-tests",
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "preLaunchTask": "${input:buildType}:vs2022-release"
-    },
-    {
-      "name": "GCC Tests Release",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/gcc-release/bin/either-tests",
-      "cwd": "${workspaceFolder}",
-      "externalConsole": false,
-      "preLaunchTask": "${input:buildType}:gcc-release",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb"
-    },
-    {
-      "name": "Clang Tests Release",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/clang-release/bin/either-tests",
-      "cwd": "${workspaceFolder}",
-      "externalConsole": false,
-      "preLaunchTask": "${input:buildType}:clang-release",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb"
-    }, // Benchmarks
-    {
-      "name": "MSVC Benchmarks Release",
-      "type": "cppvsdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/msvc2022/bin/Release/ropic-benchmarks",
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "preLaunchTask": "${input:buildType}:vs2022-release"
-    },
-    {
-      "name": "GCC Benchmarks Release",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/gcc-release/bin/ropic-benchmarks",
-      "cwd": "${workspaceFolder}",
-      "externalConsole": false,
-      "preLaunchTask": "${input:buildType}:gcc-release",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb"
-    },
-    {
-      "name": "Clang Benchmarks Release",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/clang-release/bin/ropic-benchmarks",
-      "cwd": "${workspaceFolder}",
-      "externalConsole": false,
-      "preLaunchTask": "${input:buildType}:clang-release",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb"
-    }
   ]
 }

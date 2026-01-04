@@ -2,8 +2,10 @@
 // Copyright (c) 2025 ropic contributors
 
 #include <gtest/gtest.h>
+
 #include "TestHelpers.hpp"
 
+// NOLINTBEGIN(readability-magic-numbers)
 TEST(EitherBoundary, UNIT_025_IntegerBoundaries)
 {
   RecordProperty("id", "0.01-UNIT-025");
@@ -62,3 +64,4 @@ TEST(EitherBoundary, UNIT_028_CoawaitRvalueAndLvalue)
   ASSERT_TRUE(lvalueResult.data());
   EXPECT_EQ(*lvalueResult.data(), 25);
 }
+// NOLINTEND(readability-magic-numbers)

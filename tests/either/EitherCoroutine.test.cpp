@@ -2,8 +2,10 @@
 // Copyright (c) 2025 ropic contributors
 
 #include <gtest/gtest.h>
+
 #include "TestHelpers.hpp"
 
+// NOLINTBEGIN(readability-magic-numbers)
 TEST(EitherCoroutine, UNIT_013_BasicCoreturn)
 {
   RecordProperty("id", "0.01-UNIT-013");
@@ -24,7 +26,9 @@ TEST(EitherCoroutine, UNIT_013_BasicCoreturn)
 TEST(EitherCoroutine, UNIT_014_ResultAccessible)
 {
   RecordProperty("id", "0.01-UNIT-014");
-  RecordProperty("desc", "Result accessible after coroutine completes (final_suspend works)");
+  RecordProperty(
+      "desc",
+      "Result accessible after coroutine completes (final_suspend works)");
 
   auto result = chainedAwaitsAllSucceed(0);
   ASSERT_TRUE(result.data());
@@ -47,7 +51,8 @@ TEST(EitherCoroutine, UNIT_015_DestructorCleanup)
 TEST(EitherCoroutine, UNIT_016_MoveOperations)
 {
   RecordProperty("id", "0.01-UNIT-016");
-  RecordProperty("desc", "Move from coroutine Either works, original destructor safe");
+  RecordProperty(
+      "desc", "Move from coroutine Either works, original destructor safe");
 
   auto src = returnData(42);
   auto dst = std::move(src);
@@ -64,13 +69,14 @@ TEST(EitherCoroutine, UNIT_017_ZeroCopiesOnReturn)
   auto result = returnMoveTracker(42);
   ASSERT_TRUE(result.data());
   EXPECT_EQ(result.data()->value, 42);
-  EXPECT_EQ(MoveTracker::copyCount, 0);
+  EXPECT_EQ(MoveTracker::s_copyCount, 0);
 }
 
 TEST(EitherCoroutine, UNIT_018_CoawaitBehavior)
 {
   RecordProperty("id", "0.01-UNIT-018");
-  RecordProperty("desc", "co_await continues on data, stops and propagates on error");
+  RecordProperty(
+      "desc", "co_await continues on data, stops and propagates on error");
 
   auto successResult = awaitAndAdd(returnData(10), 5);
   ASSERT_TRUE(successResult.data());
@@ -108,18 +114,19 @@ TEST(EitherCoroutine, UNIT_020_CoawaitZeroCopies)
   auto result = awaitMoveTracker(32);
   ASSERT_TRUE(result.data());
   EXPECT_EQ(result.data()->value, 42);
-  EXPECT_EQ(MoveTracker::copyCount, 0);
+  EXPECT_EQ(MoveTracker::s_copyCount, 0);
 
   MoveTracker::reset();
   auto errResult = returnIntWithMoveTrackerError(true);
   ASSERT_TRUE(errResult.error());
-  EXPECT_EQ(MoveTracker::copyCount, 0);
+  EXPECT_EQ(MoveTracker::s_copyCount, 0);
 }
 
 TEST(EitherCoroutine, UNIT_021_NestedCoroutines)
 {
   RecordProperty("id", "0.01-UNIT-021");
-  RecordProperty("desc", "Nested coroutines propagate data and errors correctly");
+  RecordProperty(
+      "desc", "Nested coroutines propagate data and errors correctly");
 
   auto success = outerCallsInnerSuccess(10);
   ASSERT_TRUE(success.data());
@@ -167,3 +174,4 @@ TEST(EitherCoroutine, UNIT_024_DeepNesting)
   ASSERT_TRUE(deepError.error());
   EXPECT_EQ(*deepError.error(), "deep error");
 }
+// NOLINTEND(readability-magic-numbers)

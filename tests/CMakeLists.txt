@@ -25,12 +25,21 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
+# set(GTEST_TARGETS gtest gtest_main gmock gmock_main)
+
+# foreach(target ${GTEST_TARGETS})
+#     if(TARGET ${target})
+#         set_target_properties(${target} PROPERTIES CXX_CLANG_TIDY "")
+#     endif()
+# endforeach()
+
 # Suppress warnings for external GoogleTest library (not our code)
 # These are GCC/Clang flags, only needed on non-MSVC compilers
 if(NOT MSVC)
   set(CONFIG_GTEST_COMPILE_OPTIONS
       -Wno-double-promotion
       -Wno-useless-cast
+      -Wno-null-dereference
   )
   if(TARGET gtest)
     target_compile_options(gtest PRIVATE ${CONFIG_GTEST_COMPILE_OPTIONS})
@@ -40,21 +49,28 @@ if(NOT MSVC)
   endif()
 endif()
 
+# Disable LTO for GoogleTest targets to avoid link-time incompatibilities
+# GoogleTest is compiled separately and may not be compatible with ThinLTO
+# We must explicitly add -fno-lto to override the global -flto=thin flags
+set(GTEST_TARGETS gtest gtest_main gmock gmock_main)
+foreach(target ${GTEST_TARGETS})
+  if(TARGET ${target})
+    set_target_properties(${target} PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION OFF
+      INTERPROCEDURAL_OPTIMIZATION_RELEASE OFF
+    )
+    # Override global LTO flags with -fno-lto (Clang/GCC)
+    if(NOT MSVC)
+      target_compile_options(${target} PRIVATE -fno-lto)
+      target_link_options(${target} PRIVATE -fno-lto)
+    endif()
+  endif()
+endforeach()
+
 ###############################################################################
 # Add executable and link libraries                                           #
 ###############################################################################
 add_subdirectory(either)
-
-###############################################################################
-# Install Targets                                                             #
-###############################################################################
-# Note: Test executables are typically not installed, but this section is
-# provided for completeness. Uncomment if you want to install test binaries.
-#
-# install(
-#   TARGETS either-tests
-#   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/tests
-# )
 
 ###############################################################################
 # Print information                                                           #

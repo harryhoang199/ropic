@@ -13,6 +13,8 @@ project(ropic
 
 # cmake_policy(SET CMP0167 NEW)
 
+# Create compile_commands.json
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 #  CHECK FOR GIT (Required on ALL platforms for FetchContent) ---
 find_package(Git QUIET)
@@ -224,6 +226,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "
     -Wnon-virtual-dtor          # Warn when polymorphic class has non-virtual destructor
     -Wold-style-cast            # Warn on C-style casts; prefer static_cast, dynamic_cast, etc.
     -Woverloaded-virtual        # Warn when derived class function hides base class virtual function
+    #-Wpadded                    # Warn if padding is added to structs (helper for memory layout optimization)
 
     # === Null Pointer and Memory Safety ===
     -Wnull-dereference          # Warn when compiler detects paths that dereference null pointers
@@ -300,6 +303,7 @@ if(MSVC)
                                              # - Disable incremental linking (/INCREMENTAL:NO)
                                              # - Use /Zi instead of /ZI (no Edit and Continue)
                                              # Uncomment and fix linker settings if needed
+    $<$<CONFIG:Debug>:/fsanitize=address
 
     #############################################################################
     # MSVC: Release Configuration
@@ -587,7 +591,7 @@ endif()
 # Activate benchmarks if ROPIC_BUILD_BENCHMARKS is ON                         #
 ###############################################################################
 if(ROPIC_BUILD_BENCHMARKS)
-  add_subdirectory(benchmark)
+  add_subdirectory(benchmarks)
 endif()
 
 ###############################################################################
@@ -595,6 +599,24 @@ endif()
 ###############################################################################
 if(ROPIC_BUILD_EXAMPLES)
   add_subdirectory(examples)
+endif()
+
+
+if(CMAKE_EXPORT_COMPILE_COMMANDS)
+    # Copy compile_commands.json from the current build directory to the project root
+    # (CMAKE_SOURCE_DIR) to make it accessible for Clangd/editors.
+    add_custom_command(
+        OUTPUT "${CMAKE_SOURCE_DIR}/compile_commands.json"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_BINARY_DIR}/compile_commands.json"
+                "${CMAKE_SOURCE_DIR}/compile_commands.json"
+        DEPENDS "${CMAKE_BINARY_DIR}/compile_commands.json"
+        COMMENT "Copying compile_commands.json to root folder for Clangd"
+    )
+    
+    # Create a custom target to ensure the copy command is always executed
+    # when building the project.
+    add_custom_target(copy_compile_commands ALL DEPENDS "${CMAKE_SOURCE_DIR}/build/compile_commands.json")
 endif()
 
 ###############################################################################

@@ -4,5 +4,5 @@
 #include "TestHelpers.hpp"
 
 // Static member definitions
-int MoveTracker::copyCount = 0;
-int MoveTracker::moveCount = 0;
+int MoveTracker::s_copyCount = 0;
+int MoveTracker::s_moveCount = 0;

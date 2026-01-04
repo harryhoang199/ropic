@@ -1,0 +1,74 @@
+
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html 
+# Required: clang-format-20+
+
+Language: Cpp
+Standard: Latest
+BasedOnStyle: LLVM
+
+# Basic formatting
+IndentWidth: 2
+ColumnLimit: 80
+UseTab: Never
+
+# Do not format comments starting with NOLINT
+CommentPragmas: '^ NOLINT'
+
+# Include sorting
+SortIncludes: true
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Group 1: Headers of 3rd party libraries with a prefix: E.g: Boost, Qt
+  # Their regex must be checked first to overload the regex of system libraries
+  - Regex:         ^<boost/.*>$
+    Priority:      2151500             # b=2 o=15 o=15
+
+  - Regex:         ^<qt/.*>$
+    Priority:      17200000            # q=17 t=20
+
+  # Group 2: Standard libraries. E.g: <iostream>, <vector>
+  - Regex:         ^<.*
+    Priority:      10
+
+  # Group 3: Local headers. E.g: "my_class.h", "utils/helper.h"
+  - Regex:         ^"[a-z].*"$
+    Priority:      100000000           # greater than max of group 1 (99999999)
+    CaseSensitive: true
+
+  - Regex:         ^"[A-Z].*"$
+    Priority:      200000000
+    CaseSensitive: true
+
+# Pointer and reference alignment
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+# Brace style - Custom with all braces on new line
+BreakBeforeBraces: Allman
+
+# Attributes/macros on separate line
+BreakAfterAttributes: Always
+
+# Arguments and parameters on separate lines (Prettier-like)
+BinPackParameters: false
+BinPackArguments: false
+AlignAfterOpenBracket: AlwaysBreak
+
+# Preprocessor directive (macro) indenting
+IndentPPDirectives: AfterHash
+
+# Template declarations on separate line
+BreakTemplateDeclarations: Yes
+
+# Only break after return type if it's too long
+BreakAfterReturnType: ExceptShortType
+
+# Break before noexcept specifier (places noexcept on its own line)
+AllowBreakBeforeNoexceptSpecifier: OnlyWithParen
+
+# Requires clause on its own line
+RequiresClausePosition: OwnLine
+IndentRequiresClause: true
+
+# Penalties to control line breaking behavior
+PenaltyBreakBeforeFirstCallParameter: 0

@@ -1,10 +1,11 @@
 #pragma once
 
-#include "Result.hpp"
 #include <cmath>
 #include <iostream>
 #include <string>
 #include <vector>
+
+#include "Result.hpp"
 
 // ==========================================
 // USAGE EXAMPLES (COROUTINE FUNCTIONS)
@@ -52,16 +53,19 @@ inline Result<double> divide(double numerator, double denominator)
  * @param denominatorStr String representation of denominator.
  * @return Either containing the result or an error.
  */
-inline Result<double> divideStr(const std::string &numeratorStr, const std::string &denominatorStr)
+inline Result<double> divideStr(
+    const std::string& numeratorStr, // NOLINT
+    const std::string& denominatorStr)
 {
-  // co_await will automatically extract the value or return the error via await_transform
-  auto xResult = parseDouble(numeratorStr);
-  double x = co_await std::move(xResult);
+  // co_await will automatically extract the value or return the error via
+  // await_transform
+  auto xEither = parseDouble(numeratorStr);
+  double x = co_await xEither;
 
-  auto yResult = parseDouble(denominatorStr);
-  if (auto err = yResult.error())
+  auto yEither = parseDouble(denominatorStr);
+  if (auto err = yEither.error())
     co_return *err;
-  double y = *(yResult.data());
+  double y = *(yEither.data());
 
   double result = co_await divide(x, y);
 
@@ -71,7 +75,8 @@ inline Result<double> divideStr(const std::string &numeratorStr, const std::stri
 }
 
 // ==========================================
-// Result<Void> EXAMPLES - Operations that succeed or fail without returning data
+// Result<Void> EXAMPLES - Operations that succeed or fail without returning
+// data
 // ==========================================
 
 /**
@@ -82,7 +87,9 @@ inline Result<double> divideStr(const std::string &numeratorStr, const std::stri
 inline Result<Void> validatePositive(double value)
 {
   if (value <= 0)
-    co_return {ErrorTag::VALIDATION, "Value must be positive, got: " + std::to_string(value)};
+    co_return {
+        ErrorTag::VALIDATION,
+        "Value must be positive, got: " + std::to_string(value)};
   co_return OK;
 }
 
@@ -91,7 +98,7 @@ inline Result<Void> validatePositive(double value)
  * @param str The string to validate.
  * @return Result<Void> - OK on success, error if empty.
  */
-inline Result<Void> validateNotEmpty(const std::string &str)
+inline Result<Void> validateNotEmpty(const std::string& str)
 {
   if (str.empty())
     co_return {ErrorTag::VALIDATION, "String cannot be empty"};
@@ -104,14 +111,15 @@ inline Result<Void> validateNotEmpty(const std::string &str)
  * @param data The data to save.
  * @return Result<Void> - OK on success, error on failure.
  */
-inline Result<Void> saveToStorage(const std::string &filename, double data)
+inline Result<Void> saveToStorage(const std::string& filename, double data)
 {
   // Validate inputs first (Result<Void> in Result<Void>)
   co_await validateNotEmpty(filename);
 
   // Simulate file operation that could fail
   if (filename.find("..") != std::string::npos)
-    co_return {ErrorTag::VALIDATION, "Invalid filename: path traversal detected"};
+    co_return {
+        ErrorTag::VALIDATION, "Invalid filename: path traversal detected"};
 
   std::cout << "Saved " << data << " to " << filename << "\n";
   co_return OK;
@@ -154,7 +162,7 @@ inline Result<double> safeLog(double value)
  *
  * Demonstrates: Chaining Result<double> then Result<Void> validation.
  */
-inline Result<double> parsePositiveDouble(const std::string &str)
+inline Result<double> parsePositiveDouble(const std::string& str)
 {
   // First parse (Result<double>)
   double value = co_await parseDouble(str);
@@ -179,9 +187,9 @@ inline Result<double> parsePositiveDouble(const std::string &str)
  * Demonstrates: Using Result<double> operations within Result<Void>.
  */
 inline Result<Void> processAndSave(
-    const std::string &numeratorStr,
-    const std::string &denominatorStr,
-    const std::string &filename)
+    const std::string& numeratorStr,
+    const std::string& denominatorStr, // NOLINT
+    const std::string& filename)
 {
   // Perform computation (Result<double> in Result<Void>)
   double result = co_await divideStr(numeratorStr, denominatorStr);
@@ -198,7 +206,8 @@ inline Result<Void> processAndSave(
  * @param exponent The exponent.
  * @return Result<Void> - OK if computable, error otherwise.
  *
- * Demonstrates: Using multiple Result<OtherType> to validate without keeping results.
+ * Demonstrates: Using multiple Result<OtherType> to validate without keeping
+ * results.
  */
 inline Result<Void> validateComputable(double base, double exponent)
 {
@@ -227,8 +236,7 @@ inline Result<Void> validateComputable(double base, double exponent)
  * Demonstrates: Complex composition of Result<Void> and Result<double>.
  */
 inline Result<double> computeWeightedAverage(
-    const std::vector<std::string> &values,
-    const std::vector<double> &weights)
+    const std::vector<std::string>& values, const std::vector<double>& weights)
 {
   if (values.size() != weights.size())
     co_return {ErrorTag::VALIDATION, "Values and weights must have same size"};
@@ -264,10 +272,10 @@ inline Result<double> computeWeightedAverage(
  *
  * Demonstrates: Aggregating multiple Result<double> into Result<Void>.
  */
-inline Result<Void> batchProcess(
-    const std::vector<std::pair<std::string, std::string>> &inputs)
+inline Result<Void>
+batchProcess(const std::vector<std::pair<std::string, std::string>>& inputs)
 {
-  for (const auto &[num, den] : inputs)
+  for (const auto& [num, den] : inputs)
   {
     // Each division returns Result<double>, but we only care about success
     (void)co_await divideStr(num, den);

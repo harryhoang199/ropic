@@ -2,8 +2,10 @@
 // Copyright (c) 2025 ropic contributors
 
 #include <gtest/gtest.h>
+
 #include "TestHelpers.hpp"
 
+// NOLINTBEGIN(readability-magic-numbers)
 TEST(EitherMoveSemantics, UNIT_006_MoveConstruct)
 {
   RecordProperty("id", "0.01-UNIT-006");
@@ -27,7 +29,8 @@ TEST(EitherMoveSemantics, UNIT_006_MoveConstruct)
 TEST(EitherMoveSemantics, UNIT_007_MoveAssign)
 {
   RecordProperty("id", "0.01-UNIT-007");
-  RecordProperty("desc", "Move assignment overwrites data with error and vice versa");
+  RecordProperty(
+      "desc", "Move assignment overwrites data with error and vice versa");
 
   Either<int, std::string> src1{std::string("new error")};
   Either<int, std::string> dst1{100};
@@ -56,17 +59,17 @@ TEST(EitherMoveSemantics, UNIT_008_SelfMoveAssign)
   Either<int, std::string> e{42};
   // Intentionally testing self-move-assignment behavior
 #if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wself-move"
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wself-move"
 #elif defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wself-move"
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wself-move"
 #endif
   e = std::move(e);
 #if defined(__clang__)
-#pragma clang diagnostic pop
+#  pragma clang diagnostic pop
 #elif defined(__GNUC__)
-#pragma GCC diagnostic pop
+#  pragma GCC diagnostic pop
 #endif
   SUCCEED();
 }
@@ -76,7 +79,7 @@ TEST(EitherMoveSemantics, UNIT_009_MoveFromLvalue)
   RecordProperty("id", "0.01-UNIT-009");
   RecordProperty("desc", "Move construct from lvalue using explicit std::move");
 
-  Either<int, std::string> &&src{42};
+  Either<int, std::string>&& src{42};
   Either<int, std::string> dst{std::move(src)};
   ASSERT_TRUE(dst.data());
   EXPECT_EQ(*dst.data(), 42);
@@ -90,8 +93,8 @@ TEST(EitherMoveSemantics, UNIT_010_ZeroCopies)
   MoveTracker::reset();
   Either<MoveTracker, std::string> src{MoveTracker{42}};
   Either<MoveTracker, std::string> dst{std::move(src)};
-  EXPECT_EQ(MoveTracker::copyCount, 0);
-  EXPECT_GT(MoveTracker::moveCount, 0);
+  EXPECT_EQ(MoveTracker::s_copyCount, 0);
+  EXPECT_GT(MoveTracker::s_moveCount, 0);
   ASSERT_TRUE(dst.data());
   EXPECT_EQ(dst.data()->value, 42);
 
@@ -99,13 +102,14 @@ TEST(EitherMoveSemantics, UNIT_010_ZeroCopies)
   Either<MoveTracker, std::string> src2{MoveTracker{42}};
   Either<MoveTracker, std::string> dst2{MoveTracker{0}};
   dst2 = std::move(src2);
-  EXPECT_EQ(MoveTracker::copyCount, 0);
-  EXPECT_GT(MoveTracker::moveCount, 0);
+  EXPECT_EQ(MoveTracker::s_copyCount, 0);
+  EXPECT_GT(MoveTracker::s_moveCount, 0);
 
   MoveTracker::reset();
   Either<int, MoveTracker> errSrc{MoveTracker{-1}};
   Either<int, MoveTracker> errDst{std::move(errSrc)};
-  EXPECT_EQ(MoveTracker::copyCount, 0);
+  EXPECT_EQ(MoveTracker::s_copyCount, 0);
   ASSERT_TRUE(errDst.error());
   EXPECT_EQ(errDst.error()->value, -1);
 }
+// NOLINTEND(readability-magic-numbers)

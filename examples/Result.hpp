@@ -3,12 +3,10 @@
 
 #pragma once
 
-#include "Error.hpp"
 #include <ropic.hpp>
 
-namespace ropic
-{
-  /// @brief Type alias for Either<DATA, Error> for convenience.
-  template <typename DATA>
-  using Result = Either<DATA, Error>;
-}
+#include "Error.hpp"
+
+/// @brief Type alias for Either<DATA, Error> for convenience.
+template <typename DATA>
+using Result = ropic::Either<DATA, Error>;

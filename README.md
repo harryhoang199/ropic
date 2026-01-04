@@ -273,8 +273,8 @@ cmake -B build
 cmake --build build --config Debug
 
 # Run example
-./build/bin/Debug/ropic_examples      # Linux/macOS
-.\build\bin\Debug\ropic_examples.exe  # Windows
+./build/bin/Debug/ropic-examples      # Linux/macOS
+.\build\bin\Debug\ropic-examples.exe  # Windows
 
 # Run tests
 ./build/bin/Debug/either-tests       # Linux/macOS

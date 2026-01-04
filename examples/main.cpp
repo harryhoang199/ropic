@@ -6,37 +6,26 @@
 //   - src/examples.h  : Example coroutine functions demonstrating usage
 //   - main.cpp        : Test cases and main function (this file)
 
-#include "examples.h"
 #include <iostream>
 
-void printSuccess(const std::string &msg)
+#include "examples.h"
+
+namespace
+{
+void printSuccess(const std::string& msg)
 {
   std::cout << "[OK] " << msg << "\n";
 }
 
-void printError(const Error &err)
+void printError(const Error& err)
 {
-  std::cout << "[FAIL] " << err.message() << " (tag: " << toString(err.tag()) << ")\n";
+  std::cout << "[FAIL] " << err.message() << " (tag: " << toString(err.tag())
+            << ")\n";
 }
-
-void f() { std::cout << "\nRunning f()\n"; }
-template <void (*func)()>
-struct MyTess
-{
-  void execute() { func(); }
-};
-
+} // namespace
+// NOLINTBEGIN(readability-magic-numbers)
 int main()
 {
-  MyTess<f> test1;
-  test1.execute();
-
-  auto lambda = []()
-  { std::cout << "\nRunning lambda()\n"; };
-
-  MyTess<lambda> test2;
-  test2.execute();
-
   std::cout << "=== Testing Railway Oriented Programming ===\n\n";
 
   // ==========================================
@@ -116,7 +105,8 @@ int main()
     printSuccess("Parsed: " + std::to_string(*task9.data()));
   std::cout << "\n";
 
-  std::cout << "Test 10: parsePositiveDouble(\"-5\") - validation fails after parse\n";
+  std::cout << "Test 10: parsePositiveDouble(\"-5\") - validation fails after "
+               "parse\n";
   auto task10 = parsePositiveDouble("-5");
   if (auto err = task10.error())
     printError(*err);
@@ -127,7 +117,8 @@ int main()
   // ==========================================
   std::cout << "--- Result<Void> using Result<double> ---\n";
 
-  std::cout << "Test 11: processAndSave(\"10\", \"2\", \"output.txt\") - success\n";
+  std::cout
+      << "Test 11: processAndSave(\"10\", \"2\", \"output.txt\") - success\n";
   auto task11 = processAndSave("10", "2", "output.txt");
   if (auto err = task11.error())
     printError(*err);
@@ -135,13 +126,15 @@ int main()
     printSuccess("Process and save completed");
   std::cout << "\n";
 
-  std::cout << "Test 12: processAndSave(\"10\", \"0\", \"output.txt\") - division fails\n";
+  std::cout << "Test 12: processAndSave(\"10\", \"0\", \"output.txt\") - "
+               "division fails\n";
   auto task12 = processAndSave("10", "0", "output.txt");
   if (auto err = task12.error())
     printError(*err);
   std::cout << "\n";
 
-  std::cout << "Test 13: processAndSave(\"10\", \"2\", \"\") - empty filename\n";
+  std::cout
+      << "Test 13: processAndSave(\"10\", \"2\", \"\") - empty filename\n";
   auto task13 = processAndSave("10", "2", "");
   if (auto err = task13.error())
     printError(*err);
@@ -166,7 +159,8 @@ int main()
   // ==========================================
   std::cout << "--- Complex Composition ---\n";
 
-  std::cout << "Test 16: computeWeightedAverage({\"10\", \"20\", \"30\"}, {1, 2, 3})\n";
+  std::cout << "Test 16: computeWeightedAverage({\"10\", \"20\", \"30\"}, {1, "
+               "2, 3})\n";
   auto task16 = computeWeightedAverage({"10", "20", "30"}, {1.0, 2.0, 3.0});
   if (auto err = task16.error())
     printError(*err);
@@ -174,19 +168,22 @@ int main()
     printSuccess("Weighted average: " + std::to_string(*task16.data()));
   std::cout << "\n";
 
-  std::cout << "Test 17: computeWeightedAverage({\"10\", \"bad\"}, {1, 2}) - parse error\n";
+  std::cout << "Test 17: computeWeightedAverage({\"10\", \"bad\"}, {1, 2}) - "
+               "parse error\n";
   auto task17 = computeWeightedAverage({"10", "bad"}, {1.0, 2.0});
   if (auto err = task17.error())
     printError(*err);
   std::cout << "\n";
 
-  std::cout << "Test 18: computeWeightedAverage({\"10\", \"20\"}, {1, -2}) - negative weight\n";
+  std::cout << "Test 18: computeWeightedAverage({\"10\", \"20\"}, {1, -2}) - "
+               "negative weight\n";
   auto task18 = computeWeightedAverage({"10", "20"}, {1.0, -2.0});
   if (auto err = task18.error())
     printError(*err);
   std::cout << "\n";
 
-  std::cout << "Test 19: batchProcess({{\"10\", \"2\"}, {\"20\", \"4\"}}) - all succeed\n";
+  std::cout << "Test 19: batchProcess({{\"10\", \"2\"}, {\"20\", \"4\"}}) - "
+               "all succeed\n";
   auto task19 = batchProcess({{"10", "2"}, {"20", "4"}});
   if (auto err = task19.error())
     printError(*err);
@@ -194,7 +191,8 @@ int main()
     printSuccess("Batch processing completed");
   std::cout << "\n";
 
-  std::cout << "Test 20: batchProcess({{\"10\", \"2\"}, {\"20\", \"0\"}}) - second fails\n";
+  std::cout << "Test 20: batchProcess({{\"10\", \"2\"}, {\"20\", \"0\"}}) - "
+               "second fails\n";
   auto task20 = batchProcess({{"10", "2"}, {"20", "0"}});
   if (auto err = task20.error())
     printError(*err);
@@ -204,3 +202,4 @@ int main()
 
   return 0;
 }
+// NOLINTEND(readability-magic-numbers)

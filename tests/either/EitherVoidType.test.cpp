@@ -2,12 +2,16 @@
 // Copyright (c) 2025 ropic contributors
 
 #include <gtest/gtest.h>
-#include "TestHelpers.hpp"
+
+#include "ropic.hpp"
+
+using namespace ropic;
 
 TEST(EitherVoidType, UNIT_011_OkAndVoidConstants)
 {
   RecordProperty("id", "0.01-UNIT-011");
-  RecordProperty("desc", "Either<Void, Error> works with OK and VOID constants");
+  RecordProperty(
+      "desc", "Either<Void, Error> works with OK and VOID constants");
 
   Either<Void, std::string> e1{OK};
   EXPECT_FALSE(e1.error());

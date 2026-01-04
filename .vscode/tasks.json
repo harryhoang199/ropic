@@ -19,14 +19,14 @@
     {
       "label": "rebuild:vs2022-debug",
       "type": "shell",
-      "command": "cmake --build --preset build-vs2022-debug --clean-first",
+      "command": "rm -rf ${workspaceFolder}/build/msvc2022-debug; cmake --preset config-msvc2022-debug; cmake --build --preset build-msvc2022-debug",
       "group": "build",
       "problemMatcher": "$msCompile"
     },
     {
       "label": "rebuild:vs2022-release",
       "type": "shell",
-      "command": "cmake --build --preset build-vs2022-release --clean-first",
+      "command": "rm -rf ${workspaceFolder}/build/msvc2022-release; cmake --preset config-msvc2022-release; cmake --build --preset build-msvc2022-release",
       "group": "build",
       "problemMatcher": "$msCompile"
     },
@@ -36,14 +36,14 @@
       "type": "shell",
       "command": "cmake --build --preset build-gcc-debug --clean-first",
       "group": "build",
-      "problemMatcher": "$gcc"
+      "problemMatcher": []
     },
     {
       "label": "build:gcc-release",
       "type": "shell",
       "command": "cmake --build --preset build-gcc-release --clean-first",
       "group": "build",
-      "problemMatcher": "$gcc"
+      "problemMatcher": []
     },
     {
       "label": "rebuild:gcc-debug",
@@ -53,7 +53,7 @@
         "cwd": "${workspaceFolder}"
       },
       "group": "build",
-      "problemMatcher": "$gcc"
+      "problemMatcher": []
     },
     {
       "label": "rebuild:gcc-release",
@@ -63,7 +63,7 @@
         "cwd": "${workspaceFolder}"
       },
       "group": "build",
-      "problemMatcher": "$gcc"
+      "problemMatcher": []
     },
     // Clang
     {
@@ -71,34 +71,51 @@
       "type": "shell",
       "command": "cmake --build --preset build-clang-debug --clean-first",
       "group": "build",
-      "problemMatcher": "$gcc"
+      "problemMatcher": []
     },
     {
       "label": "build:clang-release",
       "type": "shell",
       "command": "cmake --build --preset build-clang-release --clean-first",
       "group": "build",
-      "problemMatcher": "$gcc"
+      "problemMatcher": []
     },
     {
       "label": "rebuild:clang-debug",
       "type": "shell",
-      "command": "rm -rf ${workspaceFolder}/build/clang-debug && cmake --preset config-clang-debug && cmake --build --preset build-clang-debug --clean-first",
+      "command": "rm -rf ${workspaceFolder}/build/clang-debug && cmake --preset config-clang-debug && cmake --build --preset build-clang-debug",
       "options": {
         "cwd": "${workspaceFolder}"
       },
       "group": "build",
-      "problemMatcher": "$gcc"
+      "problemMatcher": []
     },
     {
       "label": "rebuild:clang-release",
       "type": "shell",
-      "command": "rm -rf ${workspaceFolder}/build/clang-release && cmake --preset config-clang-release && cmake --build --preset build-clang-release --clean-first",
+      "command": "rm -rf ${workspaceFolder}/build/clang-release && cmake --preset config-clang-release && cmake --build --preset build-clang-release",
       "options": {
         "cwd": "${workspaceFolder}"
       },
       "group": "build",
-      "problemMatcher": "$gcc"
+      "problemMatcher": []
+    },
+    {
+      "label": "run-sanitizer",
+      "type": "shell",
+      "command": "${command:cmake.launchTargetPath}",
+      "options": {
+        "env": {
+          "ASAN_SYMBOLIZER_PATH": "/usr/bin/llvm-symbolizer-20",
+          "ASAN_OPTIONS": "symbolize=1"
+        }
+      },
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": true
+      }
     }
   ]
 }
