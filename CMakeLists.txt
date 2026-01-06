@@ -300,7 +300,7 @@ if(MSVC)
                                              # - Disable incremental linking (/INCREMENTAL:NO)
                                              # - Use /Zi instead of /ZI (no Edit and Continue)
                                              # Uncomment and fix linker settings if needed
-    $<$<CONFIG:Debug>:/fsanitize=address
+    $<$<CONFIG:Debug>:/fsanitize=address>
 
     #############################################################################
     # MSVC: Release Configuration
