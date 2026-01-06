@@ -13,9 +13,6 @@ project(ropic
 
 # cmake_policy(SET CMP0167 NEW)
 
-# Create compile_commands.json
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 #  CHECK FOR GIT (Required on ALL platforms for FetchContent) ---
 find_package(Git QUIET)
 if(NOT GIT_FOUND)

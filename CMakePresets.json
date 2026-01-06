@@ -12,7 +12,8 @@
       "cacheVariables": {
         "ROPIC_BUILD_EXAMPLES": "ON",
         "ROPIC_BUILD_TESTING": "ON",
-        "ROPIC_BUILD_BENCHMARKS": "ON"
+        "ROPIC_BUILD_BENCHMARKS": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
@@ -21,7 +22,8 @@
       "cacheVariables": {
         "ROPIC_BUILD_EXAMPLES": "OFF",
         "ROPIC_BUILD_TESTING": "ON",
-        "ROPIC_BUILD_BENCHMARKS": "OFF"
+        "ROPIC_BUILD_BENCHMARKS": "OFF",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "OFF"
       }
     },
     {
