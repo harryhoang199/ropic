@@ -9,8 +9,9 @@ Checks: >
   concurrency-*,
   clang-analyzer-*,
   cert-*,
+  
    
-  -modernize-use-trailing-return-type,
+  -readability-named-parameter,
   -readability-identifier-length,
   -readability-braces-around-statements,
   -llvmlibc-*,

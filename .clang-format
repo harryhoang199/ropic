@@ -21,7 +21,7 @@ IncludeCategories:
   # Group 1: Headers of 3rd party libraries with a prefix: E.g: Boost, Qt
   # Their regex must be checked first to overload the regex of system libraries
   - Regex:         ^<boost/.*>$
-    Priority:      2151500             # b=2 o=15 o=15
+    Priority:      2151519             # b=2 o=15 o=15, s=19
 
   - Regex:         ^<qt/.*>$
     Priority:      17200000            # q=17 t=20
@@ -43,6 +43,11 @@ IncludeCategories:
 PointerAlignment: Left
 ReferenceAlignment: Left
 
+# Binary operators
+BreakBinaryOperations: OnePerLine
+BreakBeforeBinaryOperators: NonAssignment
+AlignOperands: AlignAfterOperator
+
 # Brace style - Custom with all braces on new line
 BreakBeforeBraces: Allman
 
@@ -53,6 +58,8 @@ BreakAfterAttributes: Always
 BinPackParameters: false
 BinPackArguments: false
 AlignAfterOpenBracket: AlwaysBreak
+
+PenaltyBreakBeforeFirstCallParameter: 0  # Penalties to control line breaking behavior
 
 # Preprocessor directive (macro) indenting
 IndentPPDirectives: AfterHash
@@ -70,5 +77,4 @@ AllowBreakBeforeNoexceptSpecifier: OnlyWithParen
 RequiresClausePosition: OwnLine
 IndentRequiresClause: true
 
-# Penalties to control line breaking behavior
-PenaltyBreakBeforeFirstCallParameter: 0
+

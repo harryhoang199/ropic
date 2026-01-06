@@ -13,15 +13,33 @@
 using namespace ropic;
 
 /**
+ * @brief Trims leading and trailing whitespace from a string.
+ * @param str The string to trim.
+ * @return Either containing the trimmed string or an error if empty.
+ */
+inline auto trim(const std::string& str) -> Result<std::string>
+{
+  const auto start = str.find_first_not_of(" \t\n\r\f\v");
+  if (start == std::string::npos)
+    co_return {ErrorTag::VALIDATION, "String is empty after trimming"};
+
+  const auto end = str.find_last_not_of(" \t\n\r\f\v");
+  co_return str.substr(start, end - start + 1);
+}
+
+/**
  * @brief Parses a string to a double.
  * @param str The string to parse.
  * @return Either containing the parsed double or an error.
  */
-inline Result<double> parseDouble(std::string str)
+inline auto parseDouble(std::string str) -> Result<double>
 {
   try
   {
-    co_return std::stod(str);
+    auto trimEither = trim(str);
+    std::string& trimmed1 = co_await trimEither;
+
+    co_return std::stod(trimmed1);
   }
   catch (...)
   {
@@ -36,7 +54,7 @@ inline Result<double> parseDouble(std::string str)
  * @param denominator The denominator.
  * @return Either containing the result or an error.
  */
-inline Result<double> divide(double numerator, double denominator)
+inline auto divide(double numerator, double denominator) -> Result<double>
 {
   if (denominator == 0.0)
   {
@@ -53,12 +71,12 @@ inline Result<double> divide(double numerator, double denominator)
  * @param denominatorStr String representation of denominator.
  * @return Either containing the result or an error.
  */
-inline Result<double> divideStr(
+inline auto divideStr(
     const std::string& numeratorStr, // NOLINT
-    const std::string& denominatorStr)
+    const std::string& denominatorStr) -> Result<double>
 {
-  // co_await will automatically extract the value or return the error via
-  // await_transform
+  std::cout << "x = " << numeratorStr << ", y = " << denominatorStr << "\n";
+
   auto xEither = parseDouble(numeratorStr);
   double x = co_await xEither;
 
@@ -68,8 +86,6 @@ inline Result<double> divideStr(
   double y = *(yEither.data());
 
   double result = co_await divide(x, y);
-
-  std::cout << "x = " << x << ", y = " << y << ", result = " << result << "\n";
 
   co_return result;
 }
@@ -84,7 +100,7 @@ inline Result<double> divideStr(
  * @param value The value to validate.
  * @return Result<Void> - OK on success, error if validation fails.
  */
-inline Result<Void> validatePositive(double value)
+inline auto validatePositive(double value) -> Result<Void>
 {
   if (value <= 0)
     co_return {
@@ -98,7 +114,7 @@ inline Result<Void> validatePositive(double value)
  * @param str The string to validate.
  * @return Result<Void> - OK on success, error if empty.
  */
-inline Result<Void> validateNotEmpty(const std::string& str)
+inline auto validateNotEmpty(const std::string& str) -> Result<Void>
 {
   if (str.empty())
     co_return {ErrorTag::VALIDATION, "String cannot be empty"};
@@ -111,7 +127,8 @@ inline Result<Void> validateNotEmpty(const std::string& str)
  * @param data The data to save.
  * @return Result<Void> - OK on success, error on failure.
  */
-inline Result<Void> saveToStorage(const std::string& filename, double data)
+inline auto saveToStorage(const std::string& filename, double data)
+    -> Result<Void>
 {
   // Validate inputs first (Result<Void> in Result<Void>)
   co_await validateNotEmpty(filename);
@@ -136,7 +153,7 @@ inline Result<Void> saveToStorage(const std::string& filename, double data)
  *
  * Demonstrates: Using Result<Void> validation within Result<double>.
  */
-inline Result<double> safeSqrt(double value)
+inline auto safeSqrt(double value) -> Result<double>
 {
   // Use Result<Void> for validation before computing
   co_await validatePositive(value);
@@ -149,7 +166,7 @@ inline Result<double> safeSqrt(double value)
  * @param value The value to compute log of.
  * @return Result<double> - The natural log or an error.
  */
-inline Result<double> safeLog(double value)
+inline auto safeLog(double value) -> Result<double>
 {
   co_await validatePositive(value);
   co_return std::log(value);
@@ -162,7 +179,7 @@ inline Result<double> safeLog(double value)
  *
  * Demonstrates: Chaining Result<double> then Result<Void> validation.
  */
-inline Result<double> parsePositiveDouble(const std::string& str)
+inline auto parsePositiveDouble(const std::string& str) -> Result<double>
 {
   // First parse (Result<double>)
   double value = co_await parseDouble(str);
@@ -186,10 +203,10 @@ inline Result<double> parsePositiveDouble(const std::string& str)
  *
  * Demonstrates: Using Result<double> operations within Result<Void>.
  */
-inline Result<Void> processAndSave(
+inline auto processAndSave(
     const std::string& numeratorStr,
     const std::string& denominatorStr, // NOLINT
-    const std::string& filename)
+    const std::string& filename) -> Result<Void>
 {
   // Perform computation (Result<double> in Result<Void>)
   double result = co_await divideStr(numeratorStr, denominatorStr);
@@ -209,7 +226,7 @@ inline Result<Void> processAndSave(
  * Demonstrates: Using multiple Result<OtherType> to validate without keeping
  * results.
  */
-inline Result<Void> validateComputable(double base, double exponent)
+inline auto validateComputable(double base, double exponent) -> Result<Void>
 {
   // Check sqrt is valid (uses the computed value but discards it)
   (void)co_await safeSqrt(base);
@@ -235,8 +252,9 @@ inline Result<Void> validateComputable(double base, double exponent)
  *
  * Demonstrates: Complex composition of Result<Void> and Result<double>.
  */
-inline Result<double> computeWeightedAverage(
+inline auto computeWeightedAverage(
     const std::vector<std::string>& values, const std::vector<double>& weights)
+    -> Result<double>
 {
   if (values.size() != weights.size())
     co_return {ErrorTag::VALIDATION, "Values and weights must have same size"};
@@ -272,8 +290,9 @@ inline Result<double> computeWeightedAverage(
  *
  * Demonstrates: Aggregating multiple Result<double> into Result<Void>.
  */
-inline Result<Void>
+inline auto
 batchProcess(const std::vector<std::pair<std::string, std::string>>& inputs)
+    -> Result<Void>
 {
   for (const auto& [num, den] : inputs)
   {
@@ -283,4 +302,46 @@ batchProcess(const std::vector<std::pair<std::string, std::string>>& inputs)
 
   std::cout << "Successfully processed " << inputs.size() << " calculations\n";
   co_return OK;
+}
+
+// ==========================================
+// ASYNC INTEGRATION EXAMPLES
+// ==========================================
+// Demonstrates co_await on non-Either awaitables (e.g., AsyncFetch)
+// within Either-returning coroutines.
+
+#include "tasks.hpp"
+
+/**
+ * @brief Simulates async fetch of both operands, then divides.
+ * @param numeratorStr The numerator value to "fetch" asynchronously.
+ * @param denominatorStr The denominator value to "fetch" asynchronously.
+ * @return Result<double> - The division result or an error.
+ *
+ * Demonstrates: Multiple co_await on non-Either awaitables (AsyncFetch)
+ * within an Either coroutine. The Either promise's pass-through
+ * await_transform handles foreign awaitables seamlessly.
+ *
+ * Each AsyncFetch simulates an async operation (e.g., network fetch, file I/O)
+ * with random latency. Both operands are fetched sequentially, then parsed
+ * and divided using standard Either operations with automatic error
+ * propagation.
+ */
+inline auto asyncDivideStr(
+    std::string numeratorStr,
+    std::string denominatorStr) -> Result<double>
+{
+  // co_await non-Either awaitables - works because EitherPromise
+  // has a pass-through await_transform for non-Either types.
+  // Simulate fetching both operands from async sources.
+  std::string fetchedNumerator =
+      co_await examples::AsyncFetch{std::move(numeratorStr)};
+
+  std::string fetchedDenominator =
+      co_await examples::AsyncFetch{std::move(denominatorStr)};
+
+  // Now use standard Either operations - errors propagate automatically
+  double result = co_await divideStr(fetchedNumerator, fetchedDenominator);
+
+  co_return result;
 }

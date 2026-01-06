@@ -102,11 +102,12 @@ ropic::Either<int, Error> divide(int a, int b) noexcept {
     co_return a / b;
 }
 
-// Using the result
+// Using the result - always check done() before accessing error()/data()
 auto result = divide(10, 2);
-if (auto* err = result.error()) {
+assert(result.done());  // For synchronous coroutines, always true
+if (auto err = result.error()) {
     std::cerr << "Error: " << err->message() << '\n';
-} else if (auto* val = result.data()) {
+} else if (auto val = result.data()) {
     std::cout << "Result: " << *val << '\n';
 }
 ```
@@ -123,7 +124,8 @@ ropic::Either<double, Error> divideStr(const std::string& numStr, const std::str
 
     // Remove co_await to catch and handle error right here
     auto y = parseDouble(denStr);
-    if(auto err = y.error())
+    assert(y.done());  // Synchronous coroutine is always done
+    if (auto err = y.error())
         co_return *err;
 
     double result = co_await divide(x, *(y.data()));
@@ -161,11 +163,91 @@ ropic::Either<ropic::Void, Error> saveConfig(const Config& cfg) noexcept {
 }
 
 auto result = saveConfig(config);
-if (auto* err = result.error()) {
+assert(result.done());  // Always check done() before accessing error()/data()
+if (auto err = result.error()) {
     std::cerr << "Save failed: " << err->message() << '\n';
 } else {
     std::cout << "Saved successfully\n";
 }
+```
+
+### Integrating with Other Coroutines
+
+Either coroutines can seamlessly integrate with other coroutine types in both directions.
+
+**Using non-Either awaitables inside Either coroutines:**
+
+The Either promise has a pass-through `await_transform` that allows `co_await` on any awaitable type. This enables integration with async operations like network fetches, file I/O, or custom awaitables.
+
+```cpp
+// A custom awaitable that simulates async data fetching
+struct AsyncFetch {
+    std::string _data;
+    explicit AsyncFetch(std::string data) : _data(std::move(data)) {}
+
+    bool await_ready() { return false; }
+    void await_suspend(std::coroutine_handle<> h) {
+        std::thread([h] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            h.resume();
+        }).detach();
+    }
+    std::string await_resume() { return std::move(_data); }
+};
+
+// Either coroutine that uses non-Either awaitables
+ropic::Either<double, Error> asyncDivide(std::string numStr, std::string denStr) noexcept {
+    // co_await non-Either awaitables - works via pass-through await_transform
+    std::string fetchedNum = co_await AsyncFetch{std::move(numStr)};
+    std::string fetchedDen = co_await AsyncFetch{std::move(denStr)};
+
+    // Then use standard Either operations with automatic error propagation
+    double result = co_await divideStr(fetchedNum, fetchedDen);
+    co_return result;
+}
+
+// Poll for completion using done()
+auto task = asyncDivide("42", "7");
+while (!task.done()) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+}
+if (auto err = task.error())
+    std::cerr << "Error: " << err->message() << '\n';
+else
+    std::cout << "Result: " << *task.data() << '\n';
+```
+
+**Using Either coroutines inside non-Either coroutines:**
+
+When `co_await`-ing an Either from a non-Either coroutine (like Task or Generator), the Either object itself is returned (not unwrapped), allowing manual error handling.
+
+```cpp
+template<typename T>
+struct Task {
+    // ... promise_type and coroutine infrastructure ...
+    T run();  // Resumes and returns result
+};
+
+// Task coroutine that calls Either-returning functions
+Task<double> computeInTask(std::string a, std::string b) {
+    // co_await on Either returns the Either object (via InteropAwaiter)
+    auto result1 = co_await divideStr(a, b);
+    auto result2 = co_await divideStr(b, a);
+
+    // Always check done() before accessing error()/data()
+    if (!result1.done() || !result2.done())
+        co_return -1.0;  // Error sentinel
+
+    // Manual error checking required in non-Either coroutines
+    if (result1.error() || result2.error())
+        co_return -1.0;  // Error sentinel
+
+    co_return result1.data().value() * result2.data().value();
+}
+
+// Run the task
+auto task = computeInTask("10", "2");
+double result = task.run();
 ```
 
 ## Build Requirements
@@ -252,10 +334,11 @@ int main() {
 
 ## CMake Options
 
-| Option                 | Default | Description                  |
-| ---------------------- | ------- | ---------------------------- |
-| `ROPIC_BUILD_EXAMPLES` | `OFF`   | Build example executable     |
-| `ROPIC_BUILD_TESTING`  | `OFF`   | Build tests (requires GTest) |
+| Option                   | Default | Description                             |
+| ------------------------ | ------- | --------------------------------------- |
+| `ROPIC_BUILD_EXAMPLES`   | `OFF`   | Build example executable                |
+| `ROPIC_BUILD_TESTING`    | `OFF`   | Build tests (requires GTest)            |
+| `ROPIC_BUILD_BENCHMARKS` | `OFF`   | Build tests (requires Google Benchmark) |
 
 Example:
 

@@ -43,13 +43,13 @@ struct MoveTracker
     ++s_moveCount;
     other.value = -1;
   }
-  MoveTracker& operator=(const MoveTracker& other)
+  auto operator=(const MoveTracker& other) -> MoveTracker&
   {
     value = other.value;
     ++s_copyCount;
     return *this;
   }
-  MoveTracker& operator=(MoveTracker&& other) noexcept
+  auto operator=(MoveTracker&& other) noexcept -> MoveTracker&
   {
     value = other.value;
     ++s_moveCount;
@@ -61,7 +61,7 @@ struct MoveTracker
     s_copyCount = 0;
     s_moveCount = 0;
   }
-  bool operator==(const MoveTracker& other) const
+  auto operator==(const MoveTracker& other) const -> bool
   {
     return value == other.value;
   }
@@ -78,22 +78,25 @@ struct LargeStruct
 // Helper Coroutines
 // =============================================================================
 
-inline Either<int, std::string> returnData(int x) { co_return x; }
-inline Either<int, std::string> returnError(std::string msg) { co_return msg; }
-inline Either<Void, std::string> returnOK() { co_return OK; }
-inline Either<Void, std::string> returnVoidError(std::string msg)
+inline auto returnData(int x) -> Either<int, std::string> { co_return x; }
+inline auto returnError(std::string msg) -> Either<int, std::string>
+{
+  co_return msg;
+}
+inline auto returnOK() -> Either<Void, std::string> { co_return OK; }
+inline auto returnVoidError(std::string msg) -> Either<Void, std::string>
 {
   co_return msg;
 }
 
-inline Either<int, std::string>
-awaitAndAdd(Either<int, std::string> input, int delta)
+inline auto awaitAndAdd(Either<int, std::string> input, int delta)
+    -> Either<int, std::string>
 {
   int val = co_await std::move(input);
   co_return val + delta;
 }
 
-inline Either<int, std::string> chainedAwaitsAllSucceed(int start)
+inline auto chainedAwaitsAllSucceed(int start) -> Either<int, std::string>
 {
   int a = co_await returnData(start);
   int b = co_await returnData(a + 10);
@@ -101,14 +104,14 @@ inline Either<int, std::string> chainedAwaitsAllSucceed(int start)
   co_return c;
 }
 
-inline Either<int, std::string> chainedAwaitsFirstFails()
+inline auto chainedAwaitsFirstFails() -> Either<int, std::string>
 {
   int a = co_await returnError("first failed");
   int b = co_await returnData(a + 10);
   co_return b;
 }
 
-inline Either<int, std::string> chainedAwaitsMiddleFails(int start)
+inline auto chainedAwaitsMiddleFails(int start) -> Either<int, std::string>
 {
   [[maybe_unused]]
   int a = co_await returnData(start);
@@ -116,103 +119,107 @@ inline Either<int, std::string> chainedAwaitsMiddleFails(int start)
   co_return b + 100;
 }
 
-inline Either<int, std::string> innerSuccess(int x) { co_return x * 2; }
-inline Either<int, std::string> innerError()
+inline auto innerSuccess(int x) -> Either<int, std::string>
+{
+  co_return x * 2;
+}
+inline auto innerError() -> Either<int, std::string>
 {
   co_return std::string("inner error");
 }
 
-inline Either<int, std::string> outerCallsInnerSuccess(int x)
+inline auto outerCallsInnerSuccess(int x) -> Either<int, std::string>
 {
   int result = co_await innerSuccess(x);
   co_return result + 5;
 }
 
-inline Either<int, std::string> outerCallsInnerError()
+inline auto outerCallsInnerError() -> Either<int, std::string>
 {
   int result = co_await innerError();
   co_return result + 5;
 }
 
-inline Either<double, std::string> mixedTypeCoroutine(int x)
+inline auto mixedTypeCoroutine(int x) -> Either<double, std::string>
 {
   int val = co_await returnData(x);
   co_return static_cast<double>(val) * 1.5;
 }
 
-inline Either<Void, std::string> validatePositive(int x)
+inline auto validatePositive(int x) -> Either<Void, std::string>
 {
   if (x <= 0)
     co_return std::string("must be positive");
   co_return OK;
 }
 
-inline Either<int, std::string> computeWithValidation(int x)
+inline auto computeWithValidation(int x) -> Either<int, std::string>
 {
   co_await validatePositive(x);
   co_return x * 2;
 }
 
 // Deep nesting (5+ levels)
-inline Either<int, std::string> level5(int x) { co_return x + 1; }
-inline Either<int, std::string> level4(int x)
+inline auto level5(int x) -> Either<int, std::string> { co_return x + 1; }
+inline auto level4(int x) -> Either<int, std::string>
 {
   int v = co_await level5(x);
   co_return v + 1;
 }
-inline Either<int, std::string> level3(int x)
+inline auto level3(int x) -> Either<int, std::string>
 {
   int v = co_await level4(x);
   co_return v + 1;
 }
-inline Either<int, std::string> level2(int x)
+inline auto level2(int x) -> Either<int, std::string>
 {
   int v = co_await level3(x);
   co_return v + 1;
 }
-inline Either<int, std::string> level1(int x)
+inline auto level1(int x) -> Either<int, std::string>
 {
   int v = co_await level2(x);
   co_return v + 1;
 }
 
-inline Either<int, std::string> level5Error()
+inline auto level5Error() -> Either<int, std::string>
 {
   co_return std::string("deep error");
 }
-inline Either<int, std::string> level4Error()
+inline auto level4Error() -> Either<int, std::string>
 {
   int v = co_await level5Error();
   co_return v + 1;
 }
-inline Either<int, std::string> level3Error()
+inline auto level3Error() -> Either<int, std::string>
 {
   int v = co_await level4Error();
   co_return v + 1;
 }
-inline Either<int, std::string> level2Error()
+inline auto level2Error() -> Either<int, std::string>
 {
   int v = co_await level3Error();
   co_return v + 1;
 }
-inline Either<int, std::string> level1Error()
+inline auto level1Error() -> Either<int, std::string>
 {
   int v = co_await level2Error();
   co_return v + 1;
 }
 
-inline Either<MoveTracker, std::string> returnMoveTracker(int x)
+inline auto returnMoveTracker(int x) -> Either<MoveTracker, std::string>
 {
   co_return MoveTracker{x};
 }
 
-inline Either<MoveTracker, std::string> awaitMoveTracker(int x)
+inline auto awaitMoveTracker(int x) -> Either<MoveTracker, std::string>
 {
   MoveTracker val = co_await returnMoveTracker(x);
   co_return MoveTracker{val.value + 10};
 }
 
-inline Either<int, MoveTracker> returnIntWithMoveTrackerError(bool shouldFail)
+inline auto returnIntWithMoveTrackerError(bool shouldFail)
+    -> Either<int, MoveTracker>
 {
   if (shouldFail)
     co_return MoveTracker{-1};

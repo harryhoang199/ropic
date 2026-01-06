@@ -12,14 +12,17 @@ TEST(EitherCoroutine, UNIT_013_BasicCoreturn)
   RecordProperty("desc", "Coroutine co_return works for data, error, and Void");
 
   auto dataResult = returnData(42);
+  ASSERT_TRUE(dataResult.done());
   ASSERT_TRUE(dataResult.data());
   EXPECT_EQ(*dataResult.data(), 42);
 
   auto errorResult = returnError("coroutine error");
+  ASSERT_TRUE(errorResult.done());
   ASSERT_TRUE(errorResult.error());
   EXPECT_EQ(*errorResult.error(), "coroutine error");
 
   auto voidResult = returnOK();
+  ASSERT_TRUE(voidResult.done());
   EXPECT_FALSE(voidResult.error());
 }
 
@@ -31,6 +34,7 @@ TEST(EitherCoroutine, UNIT_014_ResultAccessible)
       "Result accessible after coroutine completes (final_suspend works)");
 
   auto result = chainedAwaitsAllSucceed(0);
+  ASSERT_TRUE(result.done());
   ASSERT_TRUE(result.data());
   EXPECT_EQ(*result.data(), 110);
 }
@@ -56,6 +60,7 @@ TEST(EitherCoroutine, UNIT_016_MoveOperations)
 
   auto src = returnData(42);
   auto dst = std::move(src);
+  ASSERT_TRUE(dst.done());
   ASSERT_TRUE(dst.data());
   EXPECT_EQ(*dst.data(), 42);
 }
@@ -67,6 +72,7 @@ TEST(EitherCoroutine, UNIT_017_ZeroCopiesOnReturn)
 
   MoveTracker::reset();
   auto result = returnMoveTracker(42);
+  ASSERT_TRUE(result.done());
   ASSERT_TRUE(result.data());
   EXPECT_EQ(result.data()->value, 42);
   EXPECT_EQ(MoveTracker::s_copyCount, 0);
@@ -79,10 +85,12 @@ TEST(EitherCoroutine, UNIT_018_CoawaitBehavior)
       "desc", "co_await continues on data, stops and propagates on error");
 
   auto successResult = awaitAndAdd(returnData(10), 5);
+  ASSERT_TRUE(successResult.done());
   ASSERT_TRUE(successResult.data());
   EXPECT_EQ(*successResult.data(), 15);
 
   auto errorResult = awaitAndAdd(returnError("input error"), 5);
+  ASSERT_TRUE(errorResult.done());
   ASSERT_TRUE(errorResult.error());
   EXPECT_EQ(*errorResult.error(), "input error");
 }
@@ -93,14 +101,17 @@ TEST(EitherCoroutine, UNIT_019_ChainedCoawait)
   RecordProperty("desc", "Chained co_await stops at first error");
 
   auto allSucceed = chainedAwaitsAllSucceed(1);
+  ASSERT_TRUE(allSucceed.done());
   ASSERT_TRUE(allSucceed.data());
   EXPECT_EQ(*allSucceed.data(), 111);
 
   auto firstFails = chainedAwaitsFirstFails();
+  ASSERT_TRUE(firstFails.done());
   ASSERT_TRUE(firstFails.error());
   EXPECT_EQ(*firstFails.error(), "first failed");
 
   auto middleFails = chainedAwaitsMiddleFails(1);
+  ASSERT_TRUE(middleFails.done());
   ASSERT_TRUE(middleFails.error());
   EXPECT_EQ(*middleFails.error(), "middle failed");
 }
@@ -112,12 +123,14 @@ TEST(EitherCoroutine, UNIT_020_CoawaitZeroCopies)
 
   MoveTracker::reset();
   auto result = awaitMoveTracker(32);
+  ASSERT_TRUE(result.done());
   ASSERT_TRUE(result.data());
   EXPECT_EQ(result.data()->value, 42);
   EXPECT_EQ(MoveTracker::s_copyCount, 0);
 
   MoveTracker::reset();
   auto errResult = returnIntWithMoveTrackerError(true);
+  ASSERT_TRUE(errResult.done());
   ASSERT_TRUE(errResult.error());
   EXPECT_EQ(MoveTracker::s_copyCount, 0);
 }
@@ -129,10 +142,12 @@ TEST(EitherCoroutine, UNIT_021_NestedCoroutines)
       "desc", "Nested coroutines propagate data and errors correctly");
 
   auto success = outerCallsInnerSuccess(10);
+  ASSERT_TRUE(success.done());
   ASSERT_TRUE(success.data());
   EXPECT_EQ(*success.data(), 25);
 
   auto error = outerCallsInnerError();
+  ASSERT_TRUE(error.done());
   ASSERT_TRUE(error.error());
   EXPECT_EQ(*error.error(), "inner error");
 }
@@ -143,6 +158,7 @@ TEST(EitherCoroutine, UNIT_022_MixedTypes)
   RecordProperty("desc", "co_await Either<A, Err> in Either<B, Err> coroutine");
 
   auto result = mixedTypeCoroutine(10);
+  ASSERT_TRUE(result.done());
   ASSERT_TRUE(result.data());
   EXPECT_DOUBLE_EQ(*result.data(), 15.0);
 }
@@ -153,10 +169,12 @@ TEST(EitherCoroutine, UNIT_023_VoidValidation)
   RecordProperty("desc", "co_await Either<Void, Err> for validation");
 
   auto success = computeWithValidation(5);
+  ASSERT_TRUE(success.done());
   ASSERT_TRUE(success.data());
   EXPECT_EQ(*success.data(), 10);
 
   auto failure = computeWithValidation(-1);
+  ASSERT_TRUE(failure.done());
   ASSERT_TRUE(failure.error());
   EXPECT_EQ(*failure.error(), "must be positive");
 }
@@ -167,10 +185,12 @@ TEST(EitherCoroutine, UNIT_024_DeepNesting)
   RecordProperty("desc", "Deep coroutine nesting works for success and error");
 
   auto deepSuccess = level1(0);
+  ASSERT_TRUE(deepSuccess.done());
   ASSERT_TRUE(deepSuccess.data());
   EXPECT_EQ(*deepSuccess.data(), 5);
 
   auto deepError = level1Error();
+  ASSERT_TRUE(deepError.done());
   ASSERT_TRUE(deepError.error());
   EXPECT_EQ(*deepError.error(), "deep error");
 }
