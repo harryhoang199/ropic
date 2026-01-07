@@ -86,4 +86,73 @@ TEST(EitherValueMode, UNIT_005_AccessorsAnyOrder)
   EXPECT_TRUE(e2.error());
   EXPECT_FALSE(e2.data());
 }
+
+TEST(EitherValueMode, UNIT_006_ConstDataAccessor)
+{
+  RecordProperty("id", "0.01-UNIT-006");
+  RecordProperty(
+      "desc", "data() const returns Borrower<const DATA> with correct value");
+
+  const Either<int, std::string> e{42};
+  ASSERT_TRUE(e.done());
+  EXPECT_TRUE(e.data());
+  EXPECT_FALSE(e.error());
+  EXPECT_EQ(*e.data(), 42);
+
+  // Verify const-correctness: Borrower<const int> should not allow mutation
+  static_assert(
+      std::is_same_v<decltype(*e.data()), int const&>,
+      "data() const should return reference to const");
+}
+
+TEST(EitherValueMode, UNIT_007_ConstErrorAccessor)
+{
+  RecordProperty("id", "0.01-UNIT-007");
+  RecordProperty(
+      "desc", "error() const returns Borrower<const ERROR> with correct value");
+
+  const Either<int, std::string> e{std::string("const error")};
+  ASSERT_TRUE(e.done());
+  EXPECT_TRUE(e.error());
+  EXPECT_FALSE(e.data());
+  EXPECT_EQ(*e.error(), "const error");
+
+  // Verify const-correctness: Borrower<const string> should not allow mutation
+  static_assert(
+      std::is_same_v<decltype(*e.error()), std::string const&>,
+      "error() const should return reference to const");
+}
+
+TEST(EitherValueMode, UNIT_008_ConstAccessorsComplexTypes)
+{
+  RecordProperty("id", "0.01-UNIT-008");
+  RecordProperty("desc", "const accessors work with complex struct types");
+
+  const Either<TestData, TestError> dataEither{
+      TestData{.value = 200, .name = "const data"}};
+  ASSERT_TRUE(dataEither.done());
+  ASSERT_TRUE(dataEither.data());
+  EXPECT_EQ(dataEither.data()->value, 200);
+  EXPECT_EQ(dataEither.data()->name, "const data");
+
+  const Either<TestData, TestError> errorEither{
+      TestError{.code = 500, .message = "const error"}};
+  ASSERT_TRUE(errorEither.done());
+  ASSERT_TRUE(errorEither.error());
+  EXPECT_EQ(errorEither.error()->code, 500);
+  EXPECT_EQ(errorEither.error()->message, "const error");
+}
+
+TEST(EitherValueMode, UNIT_009_ConstAccessorPointerConsistency)
+{
+  RecordProperty("id", "0.01-UNIT-009");
+  RecordProperty(
+      "desc", "const accessor returns same pointer on multiple calls");
+
+  const Either<int, std::string> dataE{99};
+  EXPECT_EQ(dataE.data().get(), dataE.data().get());
+
+  const Either<int, std::string> errorE{std::string("err")};
+  EXPECT_EQ(errorE.error().get(), errorE.error().get());
+}
 // NOLINTEND(readability-magic-numbers)

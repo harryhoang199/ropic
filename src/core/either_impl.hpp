@@ -28,28 +28,6 @@ namespace ropic::detail
  *
  * @warning The `data()` and `error()` methods return Borrower pointers that
  * become dangling after the EitherImpl object is destroyed or moved.
- *
- * @code
- * // Coroutine with automatic error propagation
- * EitherImpl<int, Error> compute(int x) {
- *     if (x < 0) co_return Error{ErrorTag::VALIDATION, "Negative"};
- *     co_return x * 2;
- * }
- *
- * // Composing coroutines - errors propagate automatically via co_await
- * EitherImpl<int, Error> composed(int x) {
- *     auto value = co_await compute(x);
- *     co_return value + 10;
- * }
- *
- * // Checking results
- * auto result = compute(5);
- * if (auto err = result.error()) {
- *     std::cout << err->message();
- * } else {
- *     std::cout << *result.data();
- * }
- * @endcode
  */
 template <typename DATA, typename ERROR>
 class ROPIC_CORO_AWAIT_ELIDABLE EitherImpl
@@ -216,6 +194,13 @@ public:
     return Borrower<ERROR>{std::get_if<ERROR>(&_result)};
   }
 
+  /// @copydoc error()
+  [[nodiscard]]
+  auto error() const noexcept -> Borrower<const ERROR>
+  {
+    return Borrower<const ERROR>{std::get_if<ERROR>(&_result)};
+  }
+
   /**
    * @brief Returns optional reference to data if present, empty Borrower
    * otherwise.
@@ -231,6 +216,18 @@ public:
     return Borrower<DATA>{std::get_if<DATA>(&_result)};
   }
 
+  /// @copydoc data()
+  [[nodiscard]]
+  auto data() const noexcept -> Borrower<const DATA>
+  {
+    return Borrower<const DATA>{std::get_if<DATA>(&_result)};
+  }
+
+  /**
+   * @brief Returns true if the EitherImpl contains a result (data or error).
+   * Returns false when the coroutine is suspended
+   * @return true if data or error is present, false if in empty state.
+   */
   [[nodiscard]]
   auto done() const noexcept -> bool
   {
