@@ -39,6 +39,24 @@ if(TARGET benchmark AND NOT MSVC)
   )
 endif()
 
+# Disable LTO for Google Benchmark targets to avoid link-time incompatibilities
+# Google Benchmark is compiled separately and may not be compatible with ThinLTO
+# We must explicitly add -fno-lto to override the global -flto=thin flags
+set(BENCHMARK_TARGETS benchmark benchmark_main)
+foreach(target ${BENCHMARK_TARGETS})
+  if(TARGET ${target})
+    set_target_properties(${target} PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION OFF
+      INTERPROCEDURAL_OPTIMIZATION_RELEASE OFF
+    )
+    # Override global LTO flags with -fno-lto (Clang/GCC)
+    if(NOT MSVC)
+      target_compile_options(${target} PRIVATE -fno-lto)
+      target_link_options(${target} PRIVATE -fno-lto)
+    endif()
+  endif()
+endforeach()
+
 ###############################################################################
 # Benchmark Executable                                                        #
 ###############################################################################
@@ -59,6 +77,8 @@ target_link_libraries(ropic-benchmarks PRIVATE
     benchmark::benchmark
     benchmark::benchmark_main
 )
+target_include_directories(ropic-benchmarks SYSTEM PRIVATE benchmark)
+
 
 find_path(LIBPFM_INCLUDE_DIR NAMES perfmon/pfmlib.h)
 

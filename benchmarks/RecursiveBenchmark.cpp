@@ -24,7 +24,8 @@ using namespace ropic;
  * @param errorAt Specifies the depth at which an error occurs (decrements toward 0)
  * @return Either<int, std::string> Success with depth value, or error string
  */
-Either<int, std::string> recursiveCoawait(int depth, int errorAt) noexcept
+auto recursiveCoawait(int depth, int errorAt) noexcept
+    -> Either<int, std::string>
 {
   if (errorAt == 0)
   {
@@ -51,7 +52,7 @@ __declspec(noinline)
 #else
 __attribute__((noinline))
 #endif
-int recursiveThrow(int depth, int errorAt)
+auto recursiveThrow(int depth, int errorAt) -> int
 {
   if (errorAt == 0)
   {
@@ -76,7 +77,8 @@ __declspec(noinline)
 #else
 __attribute__((noinline))
 #endif
-std::pair<int, std::string> recursiveIfElse(int depth, int errorAt) noexcept
+auto recursiveIfElse(int depth, int errorAt) noexcept
+    -> std::pair<int, std::string>
 {
   if (errorAt == 0)
   {
