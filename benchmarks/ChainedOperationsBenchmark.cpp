@@ -10,7 +10,7 @@
 #include <benchmark/benchmark.h>
 #include <optional>
 
-#include "core/either.hpp"
+#include "ropic.hpp"
 
 using namespace ropic;
 

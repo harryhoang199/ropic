@@ -539,20 +539,14 @@ configure_file(
   @ONLY
 )
 
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/ropic.in
-  ${CMAKE_CURRENT_BINARY_DIR}/generated/ropic/ropic
-  @ONLY
-)
-
 ###############################################################################
 # Header-Only Library Target                                                  #
 ###############################################################################
 
 # Collect all header files
 file(GLOB_RECURSE ROPIC_HEADERS CONFIGURE_DEPENDS
-  src/*.hpp
-  src/*.inl
+  include/*.hpp
+  include/*.inl
 )
 
 # Create INTERFACE library (header-only)
@@ -561,15 +555,15 @@ add_library(ropic::ropic ALIAS ropic)
 
 target_compile_features(ropic INTERFACE cxx_std_20)
 
-set(ROPIC_INSTALL_SHORTCUT_INCLUDEDIR shortcut_include)
+set(ROPIC_INSTALL_STL_STYLE_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/ropic/detail/stl_style")
 target_include_directories(ropic INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
-  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-  $<INSTALL_INTERFACE:${ROPIC_INSTALL_SHORTCUT_INCLUDEDIR}>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/ropic>
+  $<INSTALL_INTERFACE:${ROPIC_INSTALL_STL_STYLE_INCLUDEDIR}>
 )
 
-###############################################################################
+###################################################s############################
 # Options                                                                     #
 ###############################################################################
 option(ROPIC_BUILD_EXAMPLES "Build example executable" OFF)
@@ -613,7 +607,7 @@ if(CMAKE_EXPORT_COMPILE_COMMANDS)
     
     # Create a custom target to ensure the copy command is always executed
     # when building the project.
-    add_custom_target(copy_compile_commands ALL DEPENDS "${CMAKE_SOURCE_DIR}/build/compile_commands.json")
+    add_custom_target(copy_compile_commands ALL DEPENDS "${CMAKE_SOURCE_DIR}/compile_commands.json")
 endif()
 
 ###############################################################################
@@ -624,23 +618,20 @@ include(CMakePackageConfigHelpers)
 
 # Install header files preserving directory structure
 install(
-  DIRECTORY src/
+  DIRECTORY include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ropic
   FILES_MATCHING
     PATTERN "*.hpp"
     PATTERN "*.inl"
+    PATTERN "ropic"
 )
 
-# Install generated version and ropic header
+# Install generated version header
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/ropic/version.hpp
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ropic
 )
 
-install(
-  FILES ${CMAKE_CURRENT_BINARY_DIR}/generated/ropic/ropic
-  DESTINATION ${ROPIC_INSTALL_SHORTCUT_INCLUDEDIR}
-)
 
 # Install the library target
 install(

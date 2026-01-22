@@ -1,0 +1,14 @@
+// -*- C++ -*-
+//
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 ropic contributors
+
+#pragma once
+
+/**
+ * @file ropic
+ * @brief Railway Oriented Programming library for C++20 coroutine-based error
+ * handling.
+ */
+
+#include "ropic.hpp"

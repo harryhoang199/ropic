@@ -5,7 +5,7 @@
 #pragma once
 
 #include "either_impl.hpp"
-#include "void.hpp"
+#include "ropic/void.hpp"
 
 namespace ropic::detail
 {

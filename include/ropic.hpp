@@ -13,6 +13,6 @@
  */
 
 // IWYU pragma: begin_exports
-#include "core/either.hpp"
+#include "ropic/either.hpp"
 
 // IWYU pragma: end_exports

@@ -8,8 +8,8 @@
 #include <variant>
 
 #include "attributes.hpp"
-#include "borrower.hpp"
 #include "either_concept.hpp"
+#include "ropic/borrower.hpp"
 
 namespace ropic::detail
 {
@@ -71,7 +71,7 @@ class ROPIC_CORO_AWAIT_ELIDABLE EitherImpl
   /// @brief Constructs an EitherImpl from a coroutine handle (coroutine mode).
   explicit EitherImpl(Handle h) noexcept : _handle(h), _result(std::monostate{})
   {
-    _handle.promise().setEither(this);
+    _handle.promise()._setEither(this);
   }
 
   void _setErrorAndNullifyHandle(ERROR&& value)
@@ -129,7 +129,7 @@ public:
   {
     // Update promise to point to new location (critical for async coroutines)
     if (_handle)
-      _handle.promise().setEither(this);
+      _handle.promise()._setEither(this);
 
     other._handle = nullptr;
     other._result = std::monostate{};
@@ -149,7 +149,7 @@ public:
 
       // Update promise to point to new location (critical for async coroutines)
       if (_handle)
-        _handle.promise().setEither(this);
+        _handle.promise()._setEither(this);
 
       other._handle = nullptr;
 

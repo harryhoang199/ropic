@@ -21,17 +21,18 @@ namespace ropic::detail
 template <typename DATA, typename ERROR>
 class EitherImpl<DATA, ERROR>::Promise
 {
+  friend EitherImpl<DATA, ERROR>;
   EitherImpl* _either = nullptr;
 
-public:
-  using DataType = DATA;
-
   /// @brief Binds this promise to its owning EitherImpl instance.
-  void setEither(EitherImpl* either) noexcept
+  void _setEither(EitherImpl* either) noexcept
   {
     assert(either);
     _either = either;
   }
+
+public:
+  using DataType = DATA;
 
   // NOLINTBEGIN(readability-identifier-naming)
   /// @brief Creates EitherImpl bound to this promise's coroutine handle.

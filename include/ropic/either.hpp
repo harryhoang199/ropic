@@ -3,7 +3,8 @@
 
 #pragma once
 
-#include "either_impl.hpp"
+#include "detail/either_impl.hpp"
+#include "void.hpp"
 
 namespace ropic
 {
