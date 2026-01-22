@@ -21,23 +21,27 @@ IncludeCategories:
   # Group 1: Headers of 3rd party libraries with a prefix: E.g: Boost, Qt
   # Their regex must be checked first to overload the regex of system libraries
   - Regex:         ^<boost/.*>$
-    Priority:      2151519             # b=2 o=15 o=15, s=19
+    Priority:      2151519            # b=2 o=15 o=15, s=19
 
   - Regex:         ^<qt/.*>$
     Priority:      17200000            # q=17 t=20
 
   # Group 2: Standard libraries. E.g: <iostream>, <vector>
-  - Regex:         ^<.*
+  - Regex:         ^<.*>$
     Priority:      10
 
-  # Group 3: Local headers. E.g: "my_class.h", "utils/helper.h"
-  - Regex:         ^"[a-z].*"$
-    Priority:      100000000           # greater than max of group 1 (99999999)
+  # Group 3: Local headers in 'detail' folder. E.g: "detail/helper.h"
+  - Regex:         ^"ropic/.*"$
+    Priority:      27000000
+
+  - Regex:         ^"detail/.*"$
+    Priority:      28000000
+
+  # Group 4: Local other headers. E.g: "my_class.h"
+  - Regex:         ^".*"$
+    Priority:      25000000           # greater than max of group 1 (24242424)
     CaseSensitive: true
 
-  - Regex:         ^"[A-Z].*"$
-    Priority:      200000000
-    CaseSensitive: true
 
 # Pointer and reference alignment
 PointerAlignment: Left

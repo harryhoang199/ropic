@@ -555,12 +555,11 @@ add_library(ropic::ropic ALIAS ropic)
 
 target_compile_features(ropic INTERFACE cxx_std_20)
 
-set(ROPIC_INSTALL_STL_STYLE_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/ropic/detail/stl_style")
 target_include_directories(ropic INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/ropic>
-  $<INSTALL_INTERFACE:${ROPIC_INSTALL_STL_STYLE_INCLUDEDIR}>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/ropic/detail/stl_style_include>
 )
 
 ###################################################s############################

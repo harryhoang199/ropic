@@ -9,14 +9,15 @@
 
 #include "attributes.hpp"
 #include "either_concept.hpp"
+
 #include "ropic/borrower.hpp"
 
 namespace ropic::detail
 {
 /**
  * @class EitherImpl
- * @brief Coroutine-based Railway Oriented Programming type: holds either data,
- * error, or empty state.
+ * @brief Coroutine-based Railway Oriented Programming type: holds either
+ * data, error, or empty state.
  *
  * @tparam DATA The success value type (must satisfy detail::plain_value_type)
  * @tparam ERROR The error type (must satisfy detail::plain_value_type). Must
@@ -68,7 +69,8 @@ class ROPIC_CORO_AWAIT_ELIDABLE EitherImpl
   /// Holds empty, data, or error
   std::variant<std::monostate, DATA, ERROR> _result;
 
-  /// @brief Constructs an EitherImpl from a coroutine handle (coroutine mode).
+  /// @brief Constructs an EitherImpl from a coroutine handle (coroutine
+  /// mode).
   explicit EitherImpl(Handle h) noexcept : _handle(h), _result(std::monostate{})
   {
     _handle.promise()._setEither(this);
@@ -147,7 +149,8 @@ public:
         _handle.destroy();
       _handle = other._handle;
 
-      // Update promise to point to new location (critical for async coroutines)
+      // Update promise to point to new location (critical for async
+      // coroutines)
       if (_handle)
         _handle.promise()._setEither(this);
 

@@ -1,10 +1,10 @@
-
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025 ropic contributors
 
 #pragma once
 
 #include "either_impl.hpp"
+
 #include "ropic/void.hpp"
 
 namespace ropic::detail
@@ -22,23 +22,23 @@ template <typename OTHER, bool IS_LVALUE>
 class EitherImpl<DATA, ERROR>::PropagatingAwaiter
 {
   AwaitableEither<OTHER, IS_LVALUE> _awaitableEither;
-  EitherImpl& _returnEither;
+  EitherImpl& _returnedEither;
 
 public:
   explicit PropagatingAwaiter(
-      EitherImpl<OTHER, ERROR>&& awaitableEither, EitherImpl& returnEither)
+      EitherImpl<OTHER, ERROR>&& awaitableEither, EitherImpl& returnedEither)
       noexcept(std::is_nothrow_move_assignable_v<EitherImpl<OTHER, ERROR>>)
     requires(!IS_LVALUE)
       : _awaitableEither{std::move(awaitableEither)},
-        _returnEither{returnEither}
+        _returnedEither{returnedEither}
   {
   }
 
   explicit PropagatingAwaiter(
       EitherImpl<OTHER, ERROR>& awaitableEither,
-      EitherImpl& returnEither) noexcept
+      EitherImpl& returnedEither) noexcept
     requires(IS_LVALUE)
-      : _awaitableEither{awaitableEither}, _returnEither{returnEither}
+      : _awaitableEither{awaitableEither}, _returnedEither{returnedEither}
   {
   }
 
@@ -57,7 +57,7 @@ public:
     auto err = _awaitableEither.error();
     assert(err && "`await_suspend` must be called with error state");
 
-    _returnEither._setErrorAndNullifyHandle(std::move(*err));
+    _returnedEither._setErrorAndNullifyHandle(std::move(*err));
     h.destroy();
   }
 
@@ -149,7 +149,7 @@ public:
 
   /// @brief Returns EitherImpl by move (rvalue).
   [[nodiscard]]
-  auto await_resume() noexcept(std::is_nothrow_move_assignable_v<DATA>)
+  auto await_resume() noexcept(std::is_nothrow_move_constructible_v<DATA>)
       -> EitherImpl
     requires(!std::is_same_v<DATA, Void> && !IS_LVALUE)
   {
