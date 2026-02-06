@@ -3,11 +3,8 @@
 
 #include <gtest/gtest.h>
 #include <mutex>
-#include <ropic.hpp>
 
-#include "TestAwaiters.hpp"
-
-using namespace ropic;
+#include "TestHelpers.hpp"
 
 // NOLINTBEGIN(readability-magic-numbers,readability-identifier-naming,readability-convert-member-functions-to-static)
 

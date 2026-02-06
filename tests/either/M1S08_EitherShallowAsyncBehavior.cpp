@@ -5,7 +5,6 @@
 #include <memory>
 #include <mutex>
 
-#include "TestAwaiters.hpp"
 #include "TestHelpers.hpp"
 
 // NOLINTBEGIN(readability-magic-numbers,readability-identifier-naming,readability-convert-member-functions-to-static)

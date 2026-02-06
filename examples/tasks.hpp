@@ -129,29 +129,29 @@ struct SimpleTask
 /// latency. Returns the configured string after a random delay (200-1000ms).
 class AsyncFetch
 {
+protected:
   std::string _data;
   std::shared_ptr<std::mutex> _mutex;
 
 public:
-  explicit AsyncFetch(
-      std::string returnData, std::shared_ptr<std::mutex> mutex) noexcept
-      : _data(std::move(returnData)),
-        _mutex(std::move(mutex))
+  explicit AsyncFetch(std::shared_ptr<std::mutex> mutex) noexcept
+      : _mutex(std::move(mutex))
   {
   }
 
   auto await_ready() -> bool { return false; }
-  auto await_suspend(std::coroutine_handle<> h) -> bool
+
+  auto await_suspend(std::coroutine_handle<> h) -> std::coroutine_handle<>
   {
-    // Detach the thread to avoid deadlock: after h.resume() the coroutine
-    // continues and may destroy this awaiter while still in the thread.
-    // Using detach means the thread runs independently.
+    // Detach the thread to avoid deadlock: after h.resume() the
+    // coroutine continues and may destroy this awaiter while still in
+    // the thread. Using detach means the thread runs independently.
     std::thread(
         [h, mutex = _mutex]()
         {
           // Random sleep to simulate variable async latency
-          constexpr long kMinSleepMs = 200;
-          constexpr long kMaxSleepMs = 1000;
+          constexpr long kMinSleepMs = 50;
+          constexpr long kMaxSleepMs = 100;
 
           std::random_device rd;
           std::mt19937 gen(rd());
@@ -163,38 +163,43 @@ public:
         })
         .detach();
 
-    return true;
+    return std::noop_coroutine();
   }
   auto await_resume() -> std::string { return std::move(_data); }
+
+  auto operator()(std::string data) -> AsyncFetch&
+  {
+    _data = std::move(data);
+    return *this;
+  }
 };
 
-class AsyncFetchForFlowTesting
+class AsyncFetchExposingHandle : public AsyncFetch
 {
-  std::string _data;
-  std::shared_ptr<std::mutex> _mutex;
+  std::coroutine_handle<>* _suspendedHandle = nullptr;
+
+  using AsyncFetch::await_suspend;
 
 public:
-  static std::coroutine_handle<> resumeHandle;
-
-  explicit AsyncFetchForFlowTesting(
-      std::string returnData, std::shared_ptr<std::mutex> mutex) noexcept
-      : _data(std::move(returnData)),
-        _mutex(std::move(mutex))
+  explicit AsyncFetchExposingHandle(
+      std::shared_ptr<std::mutex> mutex,
+      std::coroutine_handle<>* suspendedHandle) noexcept
+      : AsyncFetch(std::move(mutex)),
+        _suspendedHandle(suspendedHandle)
   {
   }
 
-  auto await_ready() -> bool { return false; }
-  auto await_suspend(std::coroutine_handle<> h) -> bool
+  auto await_suspend(std::coroutine_handle<> h) -> std::coroutine_handle<>
   {
     // Detach the thread to avoid deadlock: after h.resume() the coroutine
     // continues and may destroy this awaiter while still in the thread.
     // Using detach means the thread runs independently.
     std::thread(
-        [h, mutex = _mutex]()
+        [h, suspendedHandle = _suspendedHandle, mutex = _mutex]()
         {
           // Random sleep to simulate variable async latency
-          constexpr long kMinSleepMs = 200;
-          constexpr long kMaxSleepMs = 1000;
+          constexpr long kMinSleepMs = 50;
+          constexpr long kMaxSleepMs = 100;
 
           std::random_device rd;
           std::mt19937 gen(rd());
@@ -202,31 +207,45 @@ public:
 
           std::this_thread::sleep_for(std::chrono::milliseconds(dist(gen)));
           std::lock_guard otherLock{*mutex};
-          resumeHandle = h;
+          *suspendedHandle = h;
         })
         .detach();
-    return true;
+    return std::noop_coroutine();
   }
-  auto await_resume() -> std::string { return std::move(_data); }
+
+  auto operator()(std::string data) -> AsyncFetchExposingHandle&
+  {
+    _data = std::move(data);
+    return *this;
+  }
 };
 
-class AsyncFetchForFlowTestingWithOuterHandle : public AsyncFetchForFlowTesting
+class AsyncFetchWithSymmetricTransfer : public AsyncFetchExposingHandle
 {
-public:
-  static std::coroutine_handle<> outerHandle;
+  std::coroutine_handle<> _nextHandle;
 
-  explicit AsyncFetchForFlowTestingWithOuterHandle(
-      std::string returnData, std::shared_ptr<std::mutex> mutex) noexcept
-      : AsyncFetchForFlowTesting(std::move(returnData), std::move(mutex))
+public:
+  explicit AsyncFetchWithSymmetricTransfer(
+      std::shared_ptr<std::mutex> mutex,
+      std::coroutine_handle<>* suspendedHandle,
+      std::coroutine_handle<> nextHandle) noexcept
+      : AsyncFetchExposingHandle(std::move(mutex), suspendedHandle),
+        _nextHandle(nextHandle)
   {
   }
 
   auto await_suspend(std::coroutine_handle<> h) -> std::coroutine_handle<>
   {
-    AsyncFetchForFlowTesting::await_suspend(h);
-    if (outerHandle.done())
+    AsyncFetchExposingHandle::await_suspend(h);
+    if (_nextHandle == nullptr || _nextHandle.done())
       return std::noop_coroutine();
-    return outerHandle;
+    return _nextHandle;
+  }
+
+  auto operator()(std::string data) -> AsyncFetchWithSymmetricTransfer&
+  {
+    _data = std::move(data);
+    return *this;
   }
 };
 // NOLINTEND(readability-identifier-naming)

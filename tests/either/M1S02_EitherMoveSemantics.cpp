@@ -110,34 +110,36 @@ TEST(M1S02_EitherMoveSemantics, U05_ZeroCopies)
   RecordProperty("ver", "0.01");
   RecordProperty("desc", "Move operations use move semantics, zero copies");
 
-  MoveTracker::reset();
-  Either<MoveTracker, std::string> src = returnMoveTracker(42);
+  using MT = MoveTracker<"M1-S02-U05">;
+
+  MT::reset();
+  Either<MT, std::string> src = returnMoveTracker<"M1-S02-U05">(42);
   ASSERT_TRUE(src.done());
-  Either<MoveTracker, std::string> dst{std::move(src)};
+  Either<MT, std::string> dst{std::move(src)};
   EXPECT_FALSE(src.done());
-  EXPECT_EQ(MoveTracker::s_copyCount, 0);
-  EXPECT_GT(MoveTracker::s_moveCount, 0);
+  EXPECT_EQ(MT::s_copyCount, 0);
+  EXPECT_GT(MT::s_moveCount, 0);
   ASSERT_TRUE(dst.done());
   ASSERT_TRUE(dst.value());
   EXPECT_EQ(dst.value()->value, 42);
 
-  MoveTracker::reset();
-  Either<MoveTracker, std::string> src2 = returnMoveTracker(42);
-  Either<MoveTracker, std::string> dst2 = returnMoveTracker(0);
+  MT::reset();
+  Either<MT, std::string> src2 = returnMoveTracker<"M1-S02-U05">(42);
+  Either<MT, std::string> dst2 = returnMoveTracker<"M1-S02-U05">(0);
   ASSERT_TRUE(src2.done());
   ASSERT_TRUE(dst2.done());
   dst2 = std::move(src2);
   EXPECT_FALSE(src2.done());
   ASSERT_TRUE(dst2.done());
-  EXPECT_EQ(MoveTracker::s_copyCount, 0);
-  EXPECT_GT(MoveTracker::s_moveCount, 0);
+  EXPECT_EQ(MT::s_copyCount, 0);
+  EXPECT_GT(MT::s_moveCount, 0);
 
-  MoveTracker::reset();
-  Either<int, MoveTracker> errSrc = returnIntWithMoveTrackerError(true);
+  MT::reset();
+  Either<int, MT> errSrc = returnIntWithMoveTrackerError<"M1-S02-U05">(true);
   ASSERT_TRUE(errSrc.done());
-  Either<int, MoveTracker> errDst{std::move(errSrc)};
+  Either<int, MT> errDst{std::move(errSrc)};
   EXPECT_FALSE(errSrc.done());
-  EXPECT_EQ(MoveTracker::s_copyCount, 0);
+  EXPECT_EQ(MT::s_copyCount, 0);
   ASSERT_TRUE(errDst.done());
   ASSERT_TRUE(errDst.error());
   EXPECT_EQ(errDst.error()->value, -1);

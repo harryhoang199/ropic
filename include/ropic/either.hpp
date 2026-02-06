@@ -50,7 +50,7 @@ namespace ropic
  */
 template <typename VALUE, typename ERROR>
 using Either = std::conditional_t<
-    std::is_same_v<VALUE, void>,
+    std::same_as<VALUE, void>,
     detail::EitherImpl<Void, ERROR>,
     detail::EitherImpl<VALUE, ERROR>>;
 } // namespace ropic

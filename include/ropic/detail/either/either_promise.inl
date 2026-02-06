@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cassert>
+#include <concepts>
 #include <coroutine>
 #include <exception>
 #include <optional>
@@ -16,29 +17,32 @@
 namespace ropic::detail
 {
 /**
- * @brief Base class for Promise types, providing continuation chain and error
- * storage.
+ * @brief Non-template base for coroutine continuation chains and type-erased
+ * error storage.
  *
- * Enables error propagation through coroutine chains via the continuation
- * pointer. Used internally by EitherImpl::Promise.
- *
- * @tparam ERROR The error type stored as a raw pointer (heap-allocated).
+ * Enables heterogeneous error-type chains (e.g., PromiseBase<BaseError> →
+ * PromiseBase<NetworkError>) by storing both continuation and error as
+ * type-erased members. All chain-walking and error-transfer code operates
+ * through this single type, avoiding coroutine_handle type mismatches.
  */
-template <typename ERROR>
-class PromiseBase
+struct PromiseChainNode
 {
-public:
   /// @brief Handle to the next coroutine in the chain (for error propagation).
-  std::coroutine_handle<PromiseBase> continuation = nullptr;
+  std::coroutine_handle<PromiseChainNode> continuation = nullptr;
 
-  /// @brief Heap-allocated error, or nullptr if no error. Owned by this
-  /// promise.
-  ERROR* error = nullptr;
+  /// @brief Heap-allocated error (type-erased), or nullptr if no error.
+  /// Owned by the concrete Promise that inherits from this node.
+  void* error = nullptr;
 };
 
 /// Awaiter for EitherImpl-to-EitherImpl composition. Propagates errors,
 /// extracts values.
-template <typename VALUE, typename ERROR, typename OTHER>
+template <
+    typename VALUE,
+    typename ERROR,
+    typename OTHER_VAL,
+    typename DERIVED_ERR,
+    bool IS_EITHER_LREF>
 class PropagatingAwaiter;
 
 /**
@@ -48,17 +52,17 @@ class PropagatingAwaiter;
  * and stores co_return values directly into the associated EitherImpl.
  */
 template <typename VALUE, typename ERROR>
-class EitherImpl<VALUE, ERROR>::Promise : public PromiseBase<ERROR>
+class EitherImpl<VALUE, ERROR>::Promise : public PromiseChainNode
 {
 public:
-  using PromiseBase<ERROR>::error;        ///< Inherited error pointer.
-  using PromiseBase<ERROR>::continuation; ///< Inherited continuation handle.
+  using PromiseChainNode::continuation; ///< Inherited continuation handle.
+  using PromiseChainNode::error;        ///< Inherited error pointer (void*).
 
   /// @brief Storage for successful result. Empty until co_return VALUE.
   std::optional<VALUE> result;
 
   /// @brief Destructor. Deletes heap-allocated error if present.
-  ~Promise() { delete error; }
+  ~Promise() { delete static_cast<ERROR*>(error); }
 
   // NOLINTBEGIN(readability-identifier-naming)
   /// @brief Creates EitherImpl bound to this promise's coroutine handle.
@@ -109,27 +113,19 @@ public:
   }
 
   /// @brief Handles co_return with a VALUE value.
-  void return_value(VALUE&& v)
-      noexcept(std::is_nothrow_constructible_v<VALUE, VALUE&&>)
-    requires std::is_constructible_v<VALUE, VALUE&&>
-  {
-    result.emplace(std::move(v));
-  }
-
-  /// @brief Handles co_return with an ERROR value.
-  void return_value(ERROR&& e)
-      noexcept(std::is_nothrow_constructible_v<ERROR, ERROR&&>)
-    requires std::is_constructible_v<ERROR, ERROR&&>
-  {
-    error = new ERROR(std::move(e));
-  }
-
-  /// @brief Handles co_return with a VALUE value.
   void return_value(VALUE const& v)
       noexcept(std::is_nothrow_constructible_v<VALUE, VALUE const&>)
     requires std::is_constructible_v<VALUE, VALUE&>
   {
     result.emplace(v);
+  }
+
+  /// @brief Handles co_return with a VALUE value.
+  void return_value(VALUE&& v)
+      noexcept(std::is_nothrow_constructible_v<VALUE, VALUE&&>)
+    requires std::is_constructible_v<VALUE, VALUE&&>
+  {
+    result.emplace(std::move(v));
   }
 
   /// @brief Handles co_return with an ERROR value.
@@ -140,13 +136,21 @@ public:
     error = new ERROR(e);
   }
 
+  /// @brief Handles co_return with an ERROR value.
+  void return_value(ERROR&& e)
+      noexcept(std::is_nothrow_constructible_v<ERROR, ERROR&&>)
+    requires std::is_constructible_v<ERROR, ERROR&&>
+  {
+    error = new ERROR(std::move(e));
+  }
+
   /// @brief Handles co_return with a type derived from ERROR.
   /// @note Preserves polymorphic behavior by allocating the derived type.
   template <typename DERIVED_ERR>
-  void return_value(DERIVED_ERR&& e) noexcept(
-      std::is_nothrow_constructible_v<std::decay_t<DERIVED_ERR>, DERIVED_ERR>)
     requires std::derived_from<std::decay_t<DERIVED_ERR>, ERROR>
           && std::is_constructible_v<std::decay_t<DERIVED_ERR>, DERIVED_ERR>
+  void return_value(DERIVED_ERR&& e) noexcept(
+      std::is_nothrow_constructible_v<std::decay_t<DERIVED_ERR>, DERIVED_ERR>)
   {
     error = new std::decay_t<DERIVED_ERR>(std::forward<DERIVED_ERR>(e));
   }
@@ -155,8 +159,8 @@ public:
   /// transfer.
   ///
   /// If no error: resumes continuation (symmetric transfer) or returns no-op.
-  /// If error: walks continuation chain to find root, transfers error ownership,
-  /// then returns no-op to destroy this frame.
+  /// If error: walks continuation chain to find root, transfers error
+  /// ownership, then returns no-op to destroy this frame.
   [[nodiscard]]
   auto final_suspend() noexcept -> FinalAwaiter
   {
@@ -187,6 +191,7 @@ public:
 
   /// @brief Pass-through for types not matching specialized overloads.
   template <typename T>
+    requires(!IsEitherImpl<std::decay_t<T>>::value)
   auto await_transform(T&& awaitable) const noexcept -> T&&
   {
     return static_cast<T&&>(awaitable);
@@ -194,23 +199,28 @@ public:
 
   /// @brief Transforms rvalue or lvalue EitherImpl to PropagatingAwaiter for
   /// error propagation.
-  template <typename OTHER>
-  auto await_transform(EitherImpl<OTHER, ERROR>&& awaitable) const noexcept
-      -> PropagatingAwaiter<VALUE, ERROR, OTHER>
+  template <typename OTHER_VAL, typename DERIVED_ERR>
+    requires(std::derived_from<DERIVED_ERR, ERROR>)
+  auto await_transform(
+      EitherImpl<OTHER_VAL, DERIVED_ERR>& awaitable) const noexcept
+      -> PropagatingAwaiter<VALUE, ERROR, OTHER_VAL, DERIVED_ERR, true>
   {
-    return PropagatingAwaiter<VALUE, ERROR, OTHER>{awaitable._handle};
+    return PropagatingAwaiter<VALUE, ERROR, OTHER_VAL, DERIVED_ERR, true>{
+        awaitable._handle};
   }
 
-  /// @copydoc await_transform(EitherImpl<OTHER, ERROR>&&)
-  template <typename OTHER>
-  auto await_transform(EitherImpl<OTHER, ERROR>& awaitable) const noexcept
-      -> PropagatingAwaiter<VALUE, ERROR, OTHER>
+  /// @copydoc await_transform(EitherImpl<OTHER_VAL, ERROR>&&)
+  template <typename OTHER_VAL, typename DERIVED_ERR>
+    requires(std::convertible_to<DERIVED_ERR, ERROR>)
+  auto await_transform(
+      EitherImpl<OTHER_VAL, DERIVED_ERR>&& awaitable) const noexcept
+      -> PropagatingAwaiter<VALUE, ERROR, OTHER_VAL, DERIVED_ERR, false>
   {
-    return PropagatingAwaiter<VALUE, ERROR, OTHER>{awaitable._handle};
+    return PropagatingAwaiter<VALUE, ERROR, OTHER_VAL, DERIVED_ERR, false>{
+        awaitable._handle};
   }
   // NOLINTEND(readability-identifier-naming)
 };
 } // namespace ropic::detail
 
-#include "interop_awaiter.inl"
 #include "propagating_awaiter.inl"

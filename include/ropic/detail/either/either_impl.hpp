@@ -5,9 +5,10 @@
 
 #include <cassert>
 #include <coroutine>
+#include <utility>
 
 #include "../shared/attributes.hpp"
-#include "../shared/either_concept.hpp"
+#include "../shared/distinct_unqualified_types.hpp"
 
 #include "ropic/borrower.hpp"
 
@@ -15,7 +16,7 @@ namespace ropic::detail
 {
 /// Awaiter for non-EitherImpl coroutines (Task, Generator). Returns
 /// EitherImpl as-is.
-template <typename VALUE, typename ERROR, bool IS_EITHER_REF>
+template <typename VALUE, typename ERROR, bool IS_EITHER_LREF>
 class InteropAwaiter;
 
 /**
@@ -23,9 +24,10 @@ class InteropAwaiter;
  * @brief Coroutine-based Railway Oriented Programming type: holds either
  * data, error, or empty state.
  *
- * @tparam VALUE The success value type (must satisfy detail::plain_value_type)
- * @tparam ERROR The error type (must satisfy detail::plain_value_type). Must
- * differ from VALUE.
+ * @tparam VALUE The success value type (must satisfy
+ * detail::unqualified_type)
+ * @tparam ERROR The error type (must satisfy
+ * detail::unqualified_type). Must differ from VALUE.
  *
  * Operates in two modes:
  * - **Value Mode**: Direct container for error/data.
@@ -38,7 +40,7 @@ template <typename VALUE, typename ERROR>
 class ROPIC_CORO_AWAIT_ELIDABLE EitherImpl
 {
   static_assert(
-      either_concept<VALUE, ERROR>,
+      distinct_unqualified_types<VALUE, ERROR>,
       "`VALUE` and `ERROR` must not be identical and not be reference, const, "
       "void or monostate types");
 
@@ -70,7 +72,8 @@ class ROPIC_CORO_AWAIT_ELIDABLE EitherImpl
   }
 
 public:
-  /// @brief Promise type for coroutine machinery. Defined in either_promise.inl.
+  /// @brief Promise type for coroutine machinery. Defined in
+  /// either_promise.inl.
   using promise_type = Promise;
 
   // ==========================================
@@ -145,7 +148,7 @@ public:
   auto error() const noexcept -> Borrower<ERROR>
   {
     if (_handle != nullptr)
-      return Borrower<ERROR>{_handle.promise().error};
+      return Borrower<ERROR>{static_cast<ERROR*>(_handle.promise().error)};
 
     return Borrower<ERROR>{nullptr};
   }
@@ -186,6 +189,20 @@ public:
         || (_handle.promise().error != nullptr);
   }
 };
+
+/**
+ * @brief Type trait to detect EitherImpl specializations.
+ */
+template <typename T>
+struct IsEitherImpl : std::false_type
+{
+};
+
+template <typename DATA, typename ERROR>
+struct IsEitherImpl<EitherImpl<DATA, ERROR>> : std::true_type
+{
+};
 } // namespace ropic::detail
 
 #include "either_promise.inl"
+#include "interop_awaiter.inl"

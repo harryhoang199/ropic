@@ -13,13 +13,6 @@
 #include "examples.h"
 #include "tasks.hpp"
 
-std::coroutine_handle<> examples::AsyncFetchForFlowTesting::resumeHandle =
-    nullptr;
-
-std::coroutine_handle<>
-    examples::AsyncFetchForFlowTestingWithOuterHandle::outerHandle =
-        std::noop_coroutine();
-
 namespace
 {
 // ==========================================
@@ -99,7 +92,7 @@ void testGeneratorIntegration();
 void testAsyncShallowCoAwait();
 void testAsyncNestedCoAwait();
 void testFlowOfAsyncCoro();
-void testFlowOfAsyncCoroWithOuterHandle();
+void testFlowOfAsyncCoroWithSymmetricTransfer();
 } // namespace
 
 // ==========================================
@@ -126,8 +119,8 @@ auto main() -> int
   exec(testGeneratorIntegration);
   exec(testAsyncShallowCoAwait);
   exec(testAsyncNestedCoAwait);
-  exec(testFlowOfAsyncCoro);
-  exec(testFlowOfAsyncCoroWithOuterHandle);
+  exec(testFlowOfAsyncCoro, true);
+  exec(testFlowOfAsyncCoroWithSymmetricTransfer);
 
   std::cout << "=== All tests completed ===\n";
 
@@ -408,7 +401,8 @@ void testAsyncShallowCoAwait()
   {
     mutex = std::make_shared<std::mutex>();
     std::lock_guard lock(*mutex);
-    auto task = asyncDivideStr(" 42", "7", mutex);
+    examples::AsyncFetch fetch(mutex);
+    auto task = asyncDivideStr(" 42", "7", std::move(fetch));
     tasks.emplace_back(
         std::move(task),
         R"(Launching: asyncDivideStr(" 42", "7") - success case)",
@@ -418,7 +412,8 @@ void testAsyncShallowCoAwait()
   {
     mutex = std::make_shared<std::mutex>();
     std::lock_guard lock(*mutex);
-    auto task = asyncDivideStr("100", "0", mutex);
+    examples::AsyncFetch fetch(mutex);
+    auto task = asyncDivideStr("100", "0", std::move(fetch));
     tasks.emplace_back(
         std::move(task),
         R"(Launching: asyncDivideStr("100", "0") - division by zero)",
@@ -428,7 +423,8 @@ void testAsyncShallowCoAwait()
   {
     mutex = std::make_shared<std::mutex>();
     std::lock_guard lock(*mutex);
-    auto task = asyncDivideStr("abc", "5", mutex);
+    examples::AsyncFetch fetch(mutex);
+    auto task = asyncDivideStr("abc", "5", std::move(fetch));
     tasks.emplace_back(
         std::move(task),
         R"(Launching: asyncDivideStr("abc", "5") - parse error)",
@@ -438,7 +434,8 @@ void testAsyncShallowCoAwait()
   {
     mutex = std::make_shared<std::mutex>();
     std::lock_guard lock(*mutex);
-    auto task = asyncDivideStr("50", "2", mutex);
+    examples::AsyncFetch fetch(mutex);
+    auto task = asyncDivideStr("50", "2", std::move(fetch));
     tasks.emplace_back(
         std::move(task),
         R"(Launching: asyncDivideStr("50", "2") - success case)",
@@ -514,33 +511,33 @@ void testAsyncNestedCoAwait()
   {
     mutex = std::make_shared<std::mutex>();
     std::lock_guard lock(*mutex);
-    auto task = asyncCrossRatio(" 10", "2", "20", "4", mutex);
+    examples::AsyncFetch fetch(mutex);
+    auto task = asyncCrossRatio(" 10", "2", "20", "4", std::move(fetch));
     tasks.emplace_back(
         std::move(task),
-        R"(Launching: asyncCrossRatio(" 10", "2", "20", "4") - success
-        case)",
+        R"(Launching: asyncCrossRatio(" 10", "2", "20", "4") - success case)",
         mutex);
   }
 
   {
     mutex = std::make_shared<std::mutex>();
     std::lock_guard lock(*mutex);
-    auto task = asyncCrossRatio("abc", "2", "20", "4", mutex);
+    examples::AsyncFetch fetch(mutex);
+    auto task = asyncCrossRatio("abc", "2", "20", "4", std::move(fetch));
     tasks.emplace_back(
         std::move(task),
-        R"(Launching: asyncCrossRatio("abc", "2", "20", "4") - parse
-        error)",
+        R"(Launching: asyncCrossRatio("abc", "2", "20", "4") - parse error)",
         mutex);
   }
 
   {
     mutex = std::make_shared<std::mutex>();
     std::lock_guard lock(*mutex);
-    auto task = asyncCrossRatio("10 ", "2", ".0", "4", mutex);
+    examples::AsyncFetch fetch(mutex);
+    auto task = asyncCrossRatio("10 ", "2", ".0", "4", std::move(fetch));
     tasks.emplace_back(
         std::move(task),
-        R"(Launching: asyncCrossRatio("10 ", "2", ".0", "4") - div by
-        zero)",
+        R"(Launching: asyncCrossRatio("10 ", "2", ".0", "4") - div by zero)",
         mutex);
   }
 
@@ -584,25 +581,23 @@ void testAsyncNestedCoAwait()
 
 void testFlowOfAsyncCoro()
 {
-  auto& h = examples::AsyncFetchForFlowTesting::resumeHandle;
-  h = nullptr;
   std::cout
-      << "--- Async Nested co_await (demonstraing coro execution flow) ---\n"
-      << R"(Launching: asyncCrossRatio(" 10", "2", "20", "4") - success
-      case)"
+      << "--- Flow of Coroutine Execution ---\n"
+      << R"(Launching: asyncCrossRatio(" 10", "2", "20", "4") - success case)"
       << "\n";
 
+  std::coroutine_handle<> suspendedHandle = nullptr;
   std::shared_ptr<std::mutex> mutex = std::make_shared<std::mutex>();
-  auto task = asyncCrossRatio<examples::AsyncFetchForFlowTesting>(
-      " 10", "2", "20", "4", mutex);
+  examples::AsyncFetchExposingHandle fetch(mutex, &suspendedHandle);
+  auto task = asyncCrossRatio(" 10", "2", "20", "4", std::move(fetch));
 
   while (true)
   {
     std::lock_guard lock(*mutex);
-    if (h)
+    if (suspendedHandle)
     {
-      h.resume();
-      h = nullptr;
+      suspendedHandle.resume();
+      suspendedHandle = nullptr;
     }
     if (task.done())
       break;
@@ -615,88 +610,53 @@ void testFlowOfAsyncCoro()
     printSuccess("Result = " + std::to_string(*task.value()));
 }
 
-void testFlowOfAsyncCoroWithOuterHandle()
+void testFlowOfAsyncCoroWithSymmetricTransfer()
 {
-  auto& resumeHandle =
-      examples::AsyncFetchForFlowTestingWithOuterHandle::resumeHandle;
-  auto& outerHandle =
-      examples::AsyncFetchForFlowTestingWithOuterHandle::outerHandle;
-
   std::cout
-      << "--- Async Nested co_await (demonstraing coro execution flow with an "
-         "outer handle) ---\n"
-      << R"(Launching: asyncCrossRatio(" 10", "2", "20", "4") - success
-      case)"
+      << "--- Flow of Coroutine Execution With Symmetric Transfer ---\n"
+      << R"(Launching: asyncCrossRatio(" 10", "2", "20", "4") - success case)"
       << "\n";
-  struct Awaiter
-  {
-    std::coroutine_handle<> copyResumeHandle;
-    auto await_ready() const noexcept -> bool { return false; }
 
-    auto await_suspend(std::coroutine_handle<>) -> std::coroutine_handle<>
+  auto runTask =
+      [](std::string n1, std::string d1, std::string n2, std::string d2)
+  {
+    auto mutex = std::make_shared<std::mutex>();
+    std::coroutine_handle<> suspendedHandle = nullptr;
+    auto simpleTask = []() -> examples::SimpleTask<int>
     {
-      return copyResumeHandle;
-    }
+      co_await std::suspend_always{};
+      co_return 1;
+    }();
 
-    void await_resume() {}
-  };
-
-  auto runTask = [](std::shared_ptr<std::mutex> mutex,
-                    examples::SimpleTask<int> simpleTask,
-                    std::string n1,
-                    std::string d1,
-                    std::string n2,
-                    std::string d2)
-  {
-    resumeHandle = nullptr;
-    outerHandle = simpleTask.handle;
-
-    auto eitherTask =
-        asyncCrossRatio<examples::AsyncFetchForFlowTestingWithOuterHandle>(
-            std::move(n1), std::move(d1), std::move(n2), std::move(d2), mutex);
+    examples::AsyncFetchWithSymmetricTransfer fetch(
+        mutex, &suspendedHandle, simpleTask.handle);
+    auto eitherTask = asyncCrossRatio(
+        std::move(n1),
+        std::move(d1),
+        std::move(n2),
+        std::move(d2),
+        std::move(fetch));
 
     while (true)
     {
       std::lock_guard lock(*mutex);
-      if (resumeHandle)
+      if (suspendedHandle)
       {
-        resumeHandle.resume();
-        resumeHandle = nullptr;
+        suspendedHandle.resume();
+        suspendedHandle = nullptr;
       }
       if (eitherTask.done())
         break;
     }
-    return eitherTask;
+
+    printSuccess("Task completed: " + std::to_string(*(eitherTask.value())));
   };
 
   // ===== Task 1 =====
-  auto mutex1 = std::make_shared<std::mutex>();
-  auto simpleTask1 = [mutex1]() -> examples::SimpleTask<int>
-  {
-    std::coroutine_handle<> copyResumeHandle;
-    {
-      std::lock_guard lock(*mutex1);
-      copyResumeHandle = resumeHandle;
-    }
-    co_await Awaiter{copyResumeHandle};
-    co_return 1;
-  }();
-  auto eitherTask1 =
-      runTask(mutex1, std::move(simpleTask1), " 10", "2", "20", "4");
+  runTask(" 10", "2", "20", "4");
 
   // ===== Task 2 =====
-  auto mutex2 = std::make_shared<std::mutex>();
-  auto simpleTask2 = []() -> examples::SimpleTask<int>
-  {
-    co_await Awaiter{std::noop_coroutine()};
-    co_return 1;
-  }();
-  auto eitherTask2 =
-      runTask(mutex2, std::move(simpleTask2), ".3", "5 ", "  -.7", "2");
-
-  std::cout << "Tasks completed:\n";
-  printSuccess("Task 1 result = " + std::to_string(*eitherTask1.value()));
-  printSuccess("Task 2 result = " + std::to_string(*eitherTask2.value()));
+  runTask(".35", "5 ", "  -.7", "2");
 }
 // NOLINTEND(readability-magic-numbers)
 

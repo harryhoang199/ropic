@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 
+#include "../shared/FixedString.hpp"
 #include "ropic.hpp"
 using namespace ropic;
 
@@ -30,6 +31,8 @@ struct Coordinate
 };
 
 /// @brief Tracks destructor calls for lifetime verification tests (VALUE type).
+/// Template parameter ID ensures per-test isolation for parallel execution.
+template <FixedString ID>
 struct DestructorTracker
 {
   static int s_destructorCount;
@@ -55,7 +58,8 @@ struct DestructorTracker
   static void reset() { s_destructorCount = 0; }
 };
 
-int DestructorTracker::s_destructorCount = 0;
+template <FixedString ID>
+int DestructorTracker<ID>::s_destructorCount = 0;
 
 /// @brief VALUE type with deleted move constructor for in-place construction
 /// tests.
@@ -181,12 +185,13 @@ TEST(M1S03_EitherCoReturnValueVariants, U05_ValueDestructorOnEitherDestroy)
   RecordProperty(
       "desc", "Destructor of VALUE is called when Either is destroyed");
 
-  auto returnDestructorTracker =
-      [](int id) -> Either<DestructorTracker, std::string>
-  { co_return DestructorTracker{id}; };
+  using DT = DestructorTracker<"M1-S03-U05">;
 
-  DestructorTracker::reset();
-  ASSERT_EQ(DestructorTracker::s_destructorCount, 0);
+  auto returnDestructorTracker = [](int id) -> Either<DT, std::string>
+  { co_return DT{id}; };
+
+  DT::reset();
+  ASSERT_EQ(DT::s_destructorCount, 0);
 
   {
     auto result = returnDestructorTracker(42);
@@ -199,7 +204,7 @@ TEST(M1S03_EitherCoReturnValueVariants, U05_ValueDestructorOnEitherDestroy)
 
   // After Either goes out of scope, destructor should have been called
   // Note: Move construction in coroutine may cause additional destructor calls
-  EXPECT_GE(DestructorTracker::s_destructorCount, 1);
+  EXPECT_GE(DT::s_destructorCount, 1);
 }
 
 TEST(M1S03_EitherCoReturnValueVariants, U06_NoValueDestructorOnError)
@@ -209,12 +214,13 @@ TEST(M1S03_EitherCoReturnValueVariants, U06_NoValueDestructorOnError)
   RecordProperty(
       "desc", "VALUE destructor is NOT called when Either contains error");
 
-  auto returnDestructorTrackerError =
-      [](std::string msg) -> Either<DestructorTracker, std::string>
-  { co_return msg; };
+  using DT = DestructorTracker<"M1-S03-U06">;
 
-  DestructorTracker::reset();
-  ASSERT_EQ(DestructorTracker::s_destructorCount, 0);
+  auto returnDestructorTrackerError =
+      [](std::string msg) -> Either<DT, std::string> { co_return msg; };
+
+  DT::reset();
+  ASSERT_EQ(DT::s_destructorCount, 0);
 
   {
     auto result = returnDestructorTrackerError("some error");
@@ -225,7 +231,7 @@ TEST(M1S03_EitherCoReturnValueVariants, U06_NoValueDestructorOnError)
   }
 
   // No DestructorTracker was ever constructed, so count should be 0
-  EXPECT_EQ(DestructorTracker::s_destructorCount, 0);
+  EXPECT_EQ(DT::s_destructorCount, 0);
 }
 
 TEST(M1S03_EitherCoReturnValueVariants, U07_MultipleDestructorCalls)
@@ -235,12 +241,13 @@ TEST(M1S03_EitherCoReturnValueVariants, U07_MultipleDestructorCalls)
   RecordProperty(
       "desc", "Multiple Either instances track destructor calls independently");
 
-  auto returnDestructorTracker =
-      [](int id) -> Either<DestructorTracker, std::string>
-  { co_return DestructorTracker{id}; };
+  using DT = DestructorTracker<"M1-S03-U07">;
 
-  DestructorTracker::reset();
-  ASSERT_EQ(DestructorTracker::s_destructorCount, 0);
+  auto returnDestructorTracker = [](int id) -> Either<DT, std::string>
+  { co_return DT{id}; };
+
+  DT::reset();
+  ASSERT_EQ(DT::s_destructorCount, 0);
 
   int countAfterFirst = 0;
   {
@@ -248,7 +255,7 @@ TEST(M1S03_EitherCoReturnValueVariants, U07_MultipleDestructorCalls)
     ASSERT_TRUE(result1.value());
     ASSERT_FALSE(result1.error());
   }
-  countAfterFirst = DestructorTracker::s_destructorCount;
+  countAfterFirst = DT::s_destructorCount;
   EXPECT_GE(countAfterFirst, 1);
 
   {
@@ -256,7 +263,7 @@ TEST(M1S03_EitherCoReturnValueVariants, U07_MultipleDestructorCalls)
     ASSERT_TRUE(result2.value());
     ASSERT_FALSE(result2.error());
   }
-  EXPECT_GT(DestructorTracker::s_destructorCount, countAfterFirst);
+  EXPECT_GT(DT::s_destructorCount, countAfterFirst);
 
   {
     auto result3 = returnDestructorTracker(3);
@@ -264,9 +271,8 @@ TEST(M1S03_EitherCoReturnValueVariants, U07_MultipleDestructorCalls)
     ASSERT_FALSE(result3.error());
   }
   EXPECT_GT(
-      DestructorTracker::s_destructorCount,
-      countAfterFirst
-          + ((DestructorTracker::s_destructorCount - countAfterFirst) / 2));
+      DT::s_destructorCount,
+      countAfterFirst + ((DT::s_destructorCount - countAfterFirst) / 2));
 }
 
 // NOLINTEND(readability-magic-numbers)

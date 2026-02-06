@@ -310,31 +310,22 @@ batchProcess(const std::vector<std::pair<std::string, std::string>>& inputs)
 // Demonstrates co_await on non-Either awaitables (e.g., AsyncFetch)
 // within Either-returning coroutines.
 
-#include "tasks.hpp"
-
-template <typename AWAITER = examples::AsyncFetch>
+template <typename AWAITER>
 inline auto fetchStrings(
-    std::string numeratorStr,
-    std::string denominatorStr,
-    std::shared_ptr<std::mutex> mutex)
+    std::string numeratorStr, std::string denominatorStr, AWAITER awaiter)
     -> Result<std::pair<std::string, std::string>>
 {
   // co_await non-Either awaitables - works because EitherPromise
   // has a pass-through await_transform for non-Either types.
   // Simulate fetching both operands from async sources.
-  std::string fetchedNum = co_await AWAITER{std::move(numeratorStr), mutex};
-
-  std::string fetchedDen = co_await AWAITER{std::move(denominatorStr), mutex};
+  std::string fetchedNum = co_await awaiter(std::move(numeratorStr));
+  std::string fetchedDen = co_await awaiter(std::move(denominatorStr));
 
   co_return {fetchedNum, fetchedDen};
 }
 
 /**
  * @brief Simulates async fetch of both operands, then divides.
- * @param numeratorStr The numerator value to "fetch" asynchronously.
- * @param denominatorStr The denominator value to "fetch" asynchronously.
- * @return Result<double> - The division result or an error.
- *
  * Demonstrates: Multiple co_await on non-Either awaitables (AsyncFetch)
  * within an Either coroutine. The Either promise's pass-through
  * await_transform handles foreign awaitables seamlessly.
@@ -344,14 +335,13 @@ inline auto fetchStrings(
  * and divided using standard Either operations with automatic error
  * propagation.
  */
-template <typename AWAITER = examples::AsyncFetch>
+template <typename AWAITER>
 inline auto asyncDivideStr(
-    std::string numeratorStr,
-    std::string denominatorStr,
-    std::shared_ptr<std::mutex> mutex) -> Result<double>
+    std::string numeratorStr, std::string denominatorStr, AWAITER awaiter)
+    -> Result<double>
 {
   auto [numStr, denStr] = co_await fetchStrings<AWAITER>(
-      std::move(numeratorStr), std::move(denominatorStr), mutex);
+      std::move(numeratorStr), std::move(denominatorStr), std::move(awaiter));
 
   // Now use standard Either operations - errors propagate automatically
   double res = co_await divideStr(numStr, denStr);
@@ -359,18 +349,18 @@ inline auto asyncDivideStr(
   co_return res;
 }
 
-template <typename AWAITER = examples::AsyncFetch>
+template <typename AWAITER>
 inline auto asyncCrossRatio(
     std::string n1,
     std::string d1,
     std::string n2,
     std::string d2,
-    std::shared_ptr<std::mutex> mutex) -> Result<double>
+    AWAITER awaiter) -> Result<double>
 {
   double r1 =
-      co_await asyncDivideStr<AWAITER>(std::move(n1), std::move(d1), mutex);
-  double r2 =
-      co_await asyncDivideStr<AWAITER>(std::move(n2), std::move(d2), mutex);
+      co_await asyncDivideStr<AWAITER>(std::move(n1), std::move(d1), awaiter);
+  double r2 = co_await asyncDivideStr<AWAITER>(
+      std::move(n2), std::move(d2), std::move(awaiter));
   double crossRatio = co_await divide(r1, r2);
   co_return crossRatio;
 }

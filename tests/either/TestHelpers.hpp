@@ -7,19 +7,25 @@
 #include <climits>
 #include <string>
 
+#include "../shared/FixedString.hpp"
 #include "ropic.hpp"
+
+// IWYU pragma: begin_exports
+#include "utils/TestAwaiters.hpp"
+// IWYU pragma: end_exports
 
 using namespace ropic;
 
 // NOLINTBEGIN(readability-magic-numbers)
 
 // =============================================================================
-// Leak Detection Types
+// Leak Detection Types (Template-based with per-test isolation)
 // =============================================================================
 
 /// @brief ERROR type that tracks heap allocations to detect memory leaks.
-/// Uses atomic counters for thread-safe tracking.
-/// Tracks when instances are created via `new` (in Promise) and destroyed.
+/// Template parameter ID ensures each test case gets its own static storage,
+/// eliminating shared mutable state between tests for parallel-safe execution.
+template <FixedString ID>
 struct LeakDetectorError
 {
   static std::atomic<int> s_instanceCount;
@@ -62,6 +68,9 @@ struct LeakDetectorError
   static auto hasLeak() -> bool { return s_instanceCount != 0; }
   static auto count() -> int { return s_instanceCount.load(); }
 };
+
+template <FixedString ID>
+std::atomic<int> LeakDetectorError<ID>::s_instanceCount{0};
 
 /// @brief Multi-argument constructible ERROR type for tuple return tests.
 struct ErrorContext
@@ -123,6 +132,36 @@ struct NetworkError : BaseError
   }
 };
 
+/// @brief Derived error extending NetworkError with service context.
+struct ServiceError : NetworkError
+{
+  std::string service;
+
+  ServiceError(int c, std::string msg, std::string ep, std::string svc)
+      : NetworkError(c, std::move(msg), std::move(ep)),
+        service(std::move(svc))
+  {
+  }
+
+  [[nodiscard]]
+  auto describe() const -> std::string override
+  {
+    return message + " at " + endpoint + " [" + service + "]";
+  }
+};
+
+// IWYU pragma: begin_exports
+#include "utils/ConvertibleErrors.hpp"
+// IWYU pragma: end_exports
+
+/// @brief Deferred definition: ConvertibleToNetworkError -> NetworkError.
+/// Declared in ConvertibleErrors.hpp, defined here after NetworkError is
+/// complete.
+inline ConvertibleToNetworkError::operator NetworkError() const
+{
+  return NetworkError{code, std::string(message), std::string(endpoint)};
+}
+
 /// @brief Derived error class without move/copy constructors for fallback
 /// tests. When co_return with this type, it should fallback to BaseError
 /// overloads.
@@ -151,6 +190,8 @@ struct ImmovableNetworkError : BaseError
 };
 
 /// @brief Base error class that tracks destructor calls.
+/// Template parameter ID ensures per-test isolation for parallel execution.
+template <FixedString ID>
 struct ErrorDestructorTracker
 {
   static int s_destructorCount;
@@ -187,14 +228,19 @@ struct ErrorDestructorTracker
   static void reset() { s_destructorCount = 0; }
 };
 
+template <FixedString ID>
+int ErrorDestructorTracker<ID>::s_destructorCount = 0;
+
 /// @brief Derived error class that tracks destructor calls (polymorphic).
-struct DerivedErrorDestructorTracker : ErrorDestructorTracker
+/// Shares the same ID as the base to ensure both counters are test-isolated.
+template <FixedString ID>
+struct DerivedErrorDestructorTracker : ErrorDestructorTracker<ID>
 {
   static int s_derivedDestructorCount;
   std::string detail;
 
   DerivedErrorDestructorTracker(int c, std::string msg, std::string det)
-      : ErrorDestructorTracker(c, std::move(msg)),
+      : ErrorDestructorTracker<ID>(c, std::move(msg)),
         detail(std::move(det))
   {
   }
@@ -206,7 +252,7 @@ struct DerivedErrorDestructorTracker : ErrorDestructorTracker
       -> DerivedErrorDestructorTracker& = delete;
 
   DerivedErrorDestructorTracker(DerivedErrorDestructorTracker&& other) noexcept
-      : ErrorDestructorTracker(std::move(other)),
+      : ErrorDestructorTracker<ID>(std::move(other)),
         detail(std::move(other.detail))
   {
   }
@@ -217,15 +263,18 @@ struct DerivedErrorDestructorTracker : ErrorDestructorTracker
   [[nodiscard]]
   auto describe() const -> std::string override
   {
-    return message + ": " + detail;
+    return this->message + ": " + detail;
   }
 
   static void resetDerived()
   {
     s_derivedDestructorCount = 0;
-    ErrorDestructorTracker::reset();
+    ErrorDestructorTracker<ID>::reset();
   }
 };
+
+template <FixedString ID>
+int DerivedErrorDestructorTracker<ID>::s_derivedDestructorCount = 0;
 
 /// @brief ERROR type with deleted move constructor for in-place construction
 /// tests.
@@ -250,6 +299,9 @@ struct ImmovableError
   auto operator==(const ImmovableError& other) const -> bool = default;
 };
 
+/// @brief Tracks copy/move counts for verifying zero-copy semantics.
+/// Template parameter ID ensures per-test isolation for parallel execution.
+template <FixedString ID>
 struct MoveTracker
 {
   static int s_copyCount;
@@ -297,6 +349,12 @@ struct MoveTracker
     return value == other.value;
   }
 };
+
+template <FixedString ID>
+int MoveTracker<ID>::s_copyCount = 0;
+
+template <FixedString ID>
+int MoveTracker<ID>::s_moveCount = 0;
 
 // =============================================================================
 // Helper Coroutines
@@ -368,16 +426,18 @@ inline auto level1Error() -> Either<int, std::string>
   co_return v + 1;
 }
 
-inline auto returnMoveTracker(int x) -> Either<MoveTracker, std::string>
+template <FixedString ID>
+auto returnMoveTracker(int x) -> Either<MoveTracker<ID>, std::string>
 {
-  co_return MoveTracker{x};
+  co_return MoveTracker<ID>{x};
 }
 
-inline auto returnIntWithMoveTrackerError(bool shouldFail)
-    -> Either<int, MoveTracker>
+template <FixedString ID>
+auto returnIntWithMoveTrackerError(bool shouldFail)
+    -> Either<int, MoveTracker<ID>>
 {
   if (shouldFail)
-    co_return MoveTracker{-1};
+    co_return MoveTracker<ID>{-1};
   co_return 42;
 }
 

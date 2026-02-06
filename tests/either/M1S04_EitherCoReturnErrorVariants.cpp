@@ -252,12 +252,13 @@ TEST(M1S04_EitherCoReturnErrorVariants, U10_ErrorDestructorOnEitherDestroy)
   RecordProperty(
       "desc", "Destructor of ERROR is called when Either is destroyed");
 
-  auto returnError = [](int code,
-                        std::string msg) -> Either<int, ErrorDestructorTracker>
-  { co_return ErrorDestructorTracker{code, std::move(msg)}; };
+  using EDT = ErrorDestructorTracker<"M1-S04-U10">;
 
-  ErrorDestructorTracker::reset();
-  ASSERT_EQ(ErrorDestructorTracker::s_destructorCount, 0);
+  auto returnError = [](int code, std::string msg) -> Either<int, EDT>
+  { co_return EDT{code, std::move(msg)}; };
+
+  EDT::reset();
+  ASSERT_EQ(EDT::s_destructorCount, 0);
 
   {
     auto result = returnError(500, "Internal error");
@@ -269,7 +270,7 @@ TEST(M1S04_EitherCoReturnErrorVariants, U10_ErrorDestructorOnEitherDestroy)
   }
 
   // After Either goes out of scope, error destructor should have been called
-  EXPECT_GE(ErrorDestructorTracker::s_destructorCount, 1);
+  EXPECT_GE(EDT::s_destructorCount, 1);
 }
 
 TEST(
@@ -281,16 +282,16 @@ TEST(
   RecordProperty(
       "desc", "Destructor of DERIVED_ERR is called when Either is destroyed");
 
-  auto returnDerivedError = [](int code, std::string msg, std::string detail)
-      -> Either<int, ErrorDestructorTracker>
-  {
-    co_return DerivedErrorDestructorTracker{
-        code, std::move(msg), std::move(detail)};
-  };
+  using EDT = ErrorDestructorTracker<"M1-S04-U11">;
+  using DEDT = DerivedErrorDestructorTracker<"M1-S04-U11">;
 
-  DerivedErrorDestructorTracker::resetDerived();
-  ASSERT_EQ(ErrorDestructorTracker::s_destructorCount, 0);
-  ASSERT_EQ(DerivedErrorDestructorTracker::s_derivedDestructorCount, 0);
+  auto returnDerivedError =
+      [](int code, std::string msg, std::string detail) -> Either<int, EDT>
+  { co_return DEDT{code, std::move(msg), std::move(detail)}; };
+
+  DEDT::resetDerived();
+  ASSERT_EQ(EDT::s_destructorCount, 0);
+  ASSERT_EQ(DEDT::s_derivedDestructorCount, 0);
 
   {
     auto result = returnDerivedError(404, "Not found", "/api/users/123");
@@ -302,8 +303,8 @@ TEST(
   }
 
   // Both base and derived destructors should have been called
-  EXPECT_GE(ErrorDestructorTracker::s_destructorCount, 1);
-  EXPECT_GE(DerivedErrorDestructorTracker::s_derivedDestructorCount, 1);
+  EXPECT_GE(EDT::s_destructorCount, 1);
+  EXPECT_GE(DEDT::s_derivedDestructorCount, 1);
 }
 
 TEST(M1S04_EitherCoReturnErrorVariants, U12_NoErrorDestructorOnValue)
@@ -313,11 +314,12 @@ TEST(M1S04_EitherCoReturnErrorVariants, U12_NoErrorDestructorOnValue)
   RecordProperty(
       "desc", "ERROR destructor is NOT called when Either contains value");
 
-  auto returnValue = [](int val) -> Either<int, ErrorDestructorTracker>
-  { co_return val; };
+  using EDT = ErrorDestructorTracker<"M1-S04-U12">;
 
-  ErrorDestructorTracker::reset();
-  ASSERT_EQ(ErrorDestructorTracker::s_destructorCount, 0);
+  auto returnValue = [](int val) -> Either<int, EDT> { co_return val; };
+
+  EDT::reset();
+  ASSERT_EQ(EDT::s_destructorCount, 0);
 
   {
     auto result = returnValue(42);
@@ -328,7 +330,7 @@ TEST(M1S04_EitherCoReturnErrorVariants, U12_NoErrorDestructorOnValue)
   }
 
   // No ErrorDestructorTracker was ever constructed, so count should be 0
-  EXPECT_EQ(ErrorDestructorTracker::s_destructorCount, 0);
+  EXPECT_EQ(EDT::s_destructorCount, 0);
 }
 
 // NOLINTEND(readability-magic-numbers)

@@ -14,7 +14,7 @@
  * before dereference operations. In release builds, this check is elided.
  */
 #define BORROWED_PTR_ASSERT(ptr)                                               \
-  assert((ptr) != nullptr && "Dereferencing a null borrowed pointer")
+  assert((ptr) != nullptr && "Borrower: Dereferencing a null borrowed pointer")
 
 namespace ropic
 {
@@ -135,7 +135,8 @@ public:
 
   /// @brief Returns a reference to the pointed-to value. Asserts non-null in
   /// debug mode.
-  /// @note Equivalent to `operator*()`. Provided for explicit naming preference.
+  /// @note Equivalent to `operator*()`. Provided for explicit naming
+  /// preference.
   [[nodiscard]]
   constexpr auto value() const noexcept -> T const&
   {

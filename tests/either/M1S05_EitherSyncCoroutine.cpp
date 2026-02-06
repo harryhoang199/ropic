@@ -83,12 +83,14 @@ TEST(M1S05_EitherSyncCoroutine, U05_ZeroCopiesOnReturn)
   RecordProperty("ver", "0.01");
   RecordProperty("desc", "Coroutine return uses move semantics");
 
-  MoveTracker::reset();
-  auto result = returnMoveTracker(42);
+  using MT = MoveTracker<"M1-S05-U05">;
+
+  MT::reset();
+  auto result = returnMoveTracker<"M1-S05-U05">(42);
   ASSERT_TRUE(result.done());
   ASSERT_TRUE(result.value());
   EXPECT_EQ(result.value()->value, 42);
-  EXPECT_EQ(MoveTracker::s_copyCount, 0);
+  EXPECT_EQ(MT::s_copyCount, 0);
 }
 
 TEST(M1S05_EitherSyncCoroutine, U06_CoawaitBehavior)
@@ -179,24 +181,26 @@ TEST(M1S05_EitherSyncCoroutine, U09_CoawaitZeroCopies)
   RecordProperty("ver", "0.01");
   RecordProperty("desc", "co_await moves data/error, no copies");
 
-  auto awaitMoveTracker = [](int x) -> Either<MoveTracker, std::string>
+  using MT = MoveTracker<"M1-S05-U09">;
+
+  auto awaitMoveTracker = [](int x) -> Either<MT, std::string>
   {
-    MoveTracker val = co_await returnMoveTracker(x);
-    co_return MoveTracker{val.value + 10};
+    MT val = co_await returnMoveTracker<"M1-S05-U09">(x);
+    co_return MT{val.value + 10};
   };
 
-  MoveTracker::reset();
+  MT::reset();
   auto result = awaitMoveTracker(32);
   ASSERT_TRUE(result.done());
   ASSERT_TRUE(result.value());
   EXPECT_EQ(result.value()->value, 42);
-  EXPECT_EQ(MoveTracker::s_copyCount, 0);
+  EXPECT_EQ(MT::s_copyCount, 0);
 
-  MoveTracker::reset();
-  auto errResult = returnIntWithMoveTrackerError(true);
+  MT::reset();
+  auto errResult = returnIntWithMoveTrackerError<"M1-S05-U09">(true);
   ASSERT_TRUE(errResult.done());
   ASSERT_TRUE(errResult.error());
-  EXPECT_EQ(MoveTracker::s_copyCount, 0);
+  EXPECT_EQ(MT::s_copyCount, 0);
 }
 
 TEST(M1S05_EitherSyncCoroutine, U10_NestedCoroutines)
@@ -300,5 +304,33 @@ TEST(M1S05_EitherSyncCoroutine, U13_DeepNesting)
   ASSERT_TRUE(deepError.done());
   ASSERT_TRUE(deepError.error());
   EXPECT_EQ(*deepError.error(), "deep error");
+}
+
+TEST(M1S05_EitherSyncCoroutine, U14_CoawaitLvalueReferenceIdentity)
+{
+  RecordProperty("id", "M1-S05-U14");
+  RecordProperty("ver", "0.05");
+  RecordProperty(
+      "desc", "co_await on lvalue Either yields reference to original data");
+
+  auto lvalueEither = returnData(42);
+  ASSERT_TRUE(lvalueEither.done());
+  ASSERT_TRUE(lvalueEither.value());
+
+  const int* addressFromValue = &(*lvalueEither.value());
+  const int* addressFromCoawait = nullptr;
+
+  auto testCoroutine = [&lvalueEither,
+                        &addressFromCoawait]() -> Either<int, std::string>
+  {
+    auto& result = co_await lvalueEither;
+    addressFromCoawait = &result;
+    co_return result;
+  };
+
+  auto outer = testCoroutine();
+  ASSERT_TRUE(outer.done());
+  ASSERT_TRUE(outer.value());
+  EXPECT_EQ(addressFromCoawait, addressFromValue);
 }
 // NOLINTEND(readability-magic-numbers)
