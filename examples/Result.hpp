@@ -7,6 +7,6 @@
 
 #include "Error.hpp"
 
-/// @brief Type alias for Either<DATA, Error> for convenience.
-template <typename DATA>
-using Result = ropic::Either<DATA, Error>;
+/// @brief Type alias for Either<VALUE, Error> for convenience.
+template <typename VALUE>
+using Result = ropic::Either<VALUE, Error>;

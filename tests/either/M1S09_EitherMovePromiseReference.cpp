@@ -1,137 +1,25 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025 ropic contributors
 
-#include <atomic>
-#include <chrono>
-#include <coroutine>
 #include <gtest/gtest.h>
-#include <memory>
+#include <mutex>
 #include <ropic.hpp>
-#include <thread>
 
-// =============================================================================
-// Custom Awaiters for Testing Move Semantics
-// =============================================================================
+#include "TestAwaiters.hpp"
+
 using namespace ropic;
 
-namespace
-{ // NOLINTBEGIN(readability-magic-numbers, readability-identifier-naming)
-
-/// @brief A simple awaiter that suspends and stores the coroutine handle.
-/// Used to test move semantics with suspended coroutines.
-struct ManualResumeAwaiter
-{
-  std::coroutine_handle<> handle = nullptr;
-
-  [[nodiscard]]
-  static auto await_ready() noexcept -> bool
-  {
-    return false;
-  }
-
-  auto await_suspend(std::coroutine_handle<> h) noexcept -> bool
-  {
-    handle = h;
-    return true;
-  }
-
-  static void await_resume() noexcept {}
-
-  void resume() const
-  {
-    if (handle)
-      handle.resume();
-  }
-};
-
-/// @brief An awaiter that returns a value after manual resume.
-template <typename T>
-struct ManualResumeAwaiterWithValue
-{
-  std::coroutine_handle<> handle = nullptr;
-  T value;
-
-  explicit ManualResumeAwaiterWithValue(T v) : value(std::move(v)) {}
-
-  [[nodiscard]]
-  static auto await_ready() noexcept -> bool
-  {
-    return false;
-  }
-
-  auto await_suspend(std::coroutine_handle<> h) noexcept -> bool
-  {
-    handle = h;
-    return true;
-  }
-
-  [[nodiscard]]
-  auto await_resume() noexcept -> T
-  {
-    return std::move(value);
-  }
-
-  void resume()
-  {
-    if (handle)
-      handle.resume();
-  }
-};
-
-/// @brief An async awaiter that resumes after a delay in a background thread.
-/// Uses a shared_ptr to ensure proper cleanup even with detached threads.
-struct AsyncDelayAwaiter
-{
-  std::chrono::milliseconds delay;
-  std::shared_ptr<std::atomic<bool>> completed =
-      std::make_shared<std::atomic<bool>>(false);
-
-  explicit AsyncDelayAwaiter(std::chrono::milliseconds d) : delay(d) {}
-
-  [[nodiscard]]
-  static auto await_ready() noexcept -> bool
-  {
-    return false;
-  }
-
-  void await_suspend(std::coroutine_handle<> h) const
-  {
-    auto flag = completed;
-    std::thread(
-        [h, d = delay, flag]
-        {
-          std::this_thread::sleep_for(d);
-          h.resume();
-          flag->store(true);
-        })
-        .detach();
-  }
-
-  static void await_resume() noexcept {}
-};
-
-/// @brief Helper to poll for completion with timeout.
-template <typename F>
-auto pollUntilDone(F&& isDone, std::chrono::milliseconds timeout) -> bool
-{
-  auto start = std::chrono::steady_clock::now();
-  while (!isDone())
-  {
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    if (std::chrono::steady_clock::now() - start > timeout)
-      return false;
-  }
-  return true;
-}
-} // namespace
+// NOLINTBEGIN(readability-magic-numbers,readability-identifier-naming,readability-convert-member-functions-to-static)
 
 // =============================================================================
 // Test Suite: Move Semantics with Promise Reference Verification
+//
 // =============================================================================
 
-TEST(EitherMovePromiseReference, UNIT_049_MoveWhileSuspendedThenResume)
+TEST(M1S09_EitherMovePromiseReference, U01_MoveWhileSuspendedThenResume)
 {
-  RecordProperty("id", "0.02-UNIT-049");
+  RecordProperty("id", "M1-S09-U01");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc",
       "Move Either while suspended, then resume - promise correctly references "
@@ -148,7 +36,7 @@ TEST(EitherMovePromiseReference, UNIT_049_MoveWhileSuspendedThenResume)
   auto originalEither = coro();
 
   EXPECT_FALSE(originalEither.done());
-  EXPECT_FALSE(originalEither.data());
+  EXPECT_FALSE(originalEither.value());
   EXPECT_FALSE(originalEither.error());
 
   // Move to new location
@@ -157,31 +45,33 @@ TEST(EitherMovePromiseReference, UNIT_049_MoveWhileSuspendedThenResume)
   // Verify original is moved-from (empty state)
   EXPECT_FALSE(originalEither.done())
       << "Moved-from Either should report not done (monostate)";
-  EXPECT_FALSE(originalEither.data())
+  EXPECT_FALSE(originalEither.value())
       << "Moved-from Either should have no data";
   EXPECT_FALSE(originalEither.error())
       << "Moved-from Either should have no error";
 
   // Verify moved-to is still not done (suspended)
-  EXPECT_FALSE(movedEither.done()) << "Moved Either should still be suspended";
+  EXPECT_FALSE(movedEither.done()) << "Moved Either should still be suspended ";
 
   // Resume - this should store result in movedEither, not originalEither
   awaiter.resume();
 
   // Verify moved-to Either received the result
-  EXPECT_TRUE(movedEither.done()) << "Moved Either should be done after resume";
-  EXPECT_TRUE(movedEither.data())
+  EXPECT_TRUE(movedEither.done())
+      << "Moved Either should be done after resume ";
+  EXPECT_TRUE(movedEither.value())
       << "Moved Either should have data after resume";
-  EXPECT_EQ(*movedEither.data(), 42);
+  EXPECT_EQ(*movedEither.value(), 42);
 
   // Verify original is still empty
   EXPECT_FALSE(originalEither.done());
-  EXPECT_FALSE(originalEither.data());
+  EXPECT_FALSE(originalEither.value());
 }
 
-TEST(EitherMovePromiseReference, UNIT_050_MoveAssignWhileSuspendedThenResume)
+TEST(M1S09_EitherMovePromiseReference, U02_MoveAssignWhileSuspendedThenResume)
 {
-  RecordProperty("id", "0.02-UNIT-050");
+  RecordProperty("id", "M1-S09-U02");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc",
       "Move-assign Either while suspended, then resume - promise correctly "
@@ -196,7 +86,7 @@ TEST(EitherMovePromiseReference, UNIT_050_MoveAssignWhileSuspendedThenResume)
   };
 
   auto originalEither = coro();
-  Either<int, std::string> targetEither{0};
+  auto targetEither = []() -> Either<int, std::string> { co_return 0; }();
 
   EXPECT_FALSE(originalEither.done());
   EXPECT_TRUE(targetEither.done());
@@ -211,15 +101,16 @@ TEST(EitherMovePromiseReference, UNIT_050_MoveAssignWhileSuspendedThenResume)
   awaiter.resume();
 
   EXPECT_TRUE(targetEither.done());
-  EXPECT_TRUE(targetEither.data());
-  EXPECT_EQ(*targetEither.data(), 99);
+  EXPECT_TRUE(targetEither.value());
+  EXPECT_EQ(*targetEither.value(), 99);
 
   EXPECT_FALSE(originalEither.done());
 }
 
-TEST(EitherMovePromiseReference, UNIT_051_MoveWhileSuspendedErrorPath)
+TEST(M1S09_EitherMovePromiseReference, U03_MoveWhileSuspendedErrorPath)
 {
-  RecordProperty("id", "0.02-UNIT-051");
+  RecordProperty("id", "M1-S09-U03");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc",
       "Move Either while suspended, resume with error - promise correctly "
@@ -253,9 +144,10 @@ TEST(EitherMovePromiseReference, UNIT_051_MoveWhileSuspendedErrorPath)
   EXPECT_FALSE(originalEither.error());
 }
 
-TEST(EitherMovePromiseReference, UNIT_052_MultipleMovesThenResume)
+TEST(M1S09_EitherMovePromiseReference, U04_MultipleMovesThenResume)
 {
-  RecordProperty("id", "0.02-UNIT-052");
+  RecordProperty("id", "M1-S09-U04");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc",
       "Move Either multiple times while suspended - promise tracks final "
@@ -280,7 +172,7 @@ TEST(EitherMovePromiseReference, UNIT_052_MultipleMovesThenResume)
   EXPECT_FALSE(either2.done());
   EXPECT_FALSE(either3.done());
 
-  Either<int, std::string> either4{0};
+  auto either4 = []() -> Either<int, std::string> { co_return 0; }();
   either4 = std::move(either3);
   EXPECT_FALSE(either3.done());
   EXPECT_FALSE(either4.done());
@@ -289,8 +181,8 @@ TEST(EitherMovePromiseReference, UNIT_052_MultipleMovesThenResume)
 
   // Only the final location should have the result
   EXPECT_TRUE(either4.done());
-  EXPECT_TRUE(either4.data());
-  EXPECT_EQ(*either4.data(), 777);
+  EXPECT_TRUE(either4.value());
+  EXPECT_EQ(*either4.value(), 777);
 
   // All others should be empty
   EXPECT_FALSE(either1.done());
@@ -298,9 +190,10 @@ TEST(EitherMovePromiseReference, UNIT_052_MultipleMovesThenResume)
   EXPECT_FALSE(either3.done());
 }
 
-TEST(EitherMovePromiseReference, UNIT_053_MoveVoidEitherWhileSuspended)
+TEST(M1S09_EitherMovePromiseReference, U05_MoveVoidEitherWhileSuspended)
 {
-  RecordProperty("id", "0.02-UNIT-053");
+  RecordProperty("id", "M1-S09-U05");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc",
       "Move Either<Void, Error> while suspended - promise correctly references "
@@ -331,40 +224,57 @@ TEST(EitherMovePromiseReference, UNIT_053_MoveVoidEitherWhileSuspended)
   EXPECT_FALSE(originalEither.done());
 }
 
-TEST(EitherMovePromiseReference, UNIT_054_AsyncMoveWhileSuspended)
+TEST(M1S09_EitherMovePromiseReference, U06_AsyncMoveWhileSuspended)
 {
-  RecordProperty("id", "0.02-UNIT-054");
+  RecordProperty("id", "M1-S09-U06");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc",
       "Move Either during async operation - promise correctly references new "
       "Either");
 
-  auto coro = []() -> Either<int, std::string>
+  auto mutex = std::make_shared<std::mutex>();
+
+  auto coro = [mutex]() -> Either<int, std::string>
   {
-    co_await AsyncDelayAwaiter{std::chrono::milliseconds(30)};
+    co_await AsyncDelayAwaiter{std::chrono::milliseconds(30), mutex};
     co_return 555;
   };
 
-  auto originalEither = coro();
+  Either<int, std::string>* originalEitherPtr;
+  Either<int, std::string>* movedEitherPtr;
 
-  EXPECT_FALSE(originalEither.done());
+  {
+    std::lock_guard lock(*mutex);
+    originalEitherPtr = new Either<int, std::string>(coro());
+    EXPECT_FALSE(originalEitherPtr->done());
 
-  // Move immediately (while async operation in flight)
-  auto movedEither = std::move(originalEither);
+    // Move immediately (while async operation in flight)
+    movedEitherPtr =
+        new Either<int, std::string>(std::move(*originalEitherPtr));
 
-  EXPECT_FALSE(originalEither.done());
-  EXPECT_FALSE(movedEither.done());
+    EXPECT_FALSE(originalEitherPtr->done());
+    EXPECT_FALSE(originalEitherPtr->done());
+  }
 
   // Wait for async completion
   ASSERT_TRUE(pollUntilDone(
-      [&] { return movedEither.done(); }, std::chrono::seconds(2)))
+      [movedEitherPtr, mutex]
+      {
+        std::lock_guard lock(*mutex);
+        return movedEitherPtr->done();
+      },
+      std::chrono::seconds(2)))
       << "Timeout waiting for async completion";
 
-  EXPECT_TRUE(movedEither.done());
-  EXPECT_TRUE(movedEither.data());
-  EXPECT_EQ(*movedEither.data(), 555);
+  EXPECT_TRUE(movedEitherPtr->done());
+  EXPECT_TRUE(movedEitherPtr->value());
+  EXPECT_EQ(*(movedEitherPtr->value()), 555);
 
-  EXPECT_FALSE(originalEither.done());
+  EXPECT_FALSE(originalEitherPtr->done());
+
+  delete originalEitherPtr;
+  delete movedEitherPtr;
 }
 
-// NOLINTEND(readability-magic-numbers, readability-identifier-naming)
+// NOLINTEND(readability-magic-numbers,readability-identifier-naming,readability-convert-member-functions-to-static)

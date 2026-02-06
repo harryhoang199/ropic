@@ -1,6 +1,6 @@
 
 # https://clang.llvm.org/docs/ClangFormatStyleOptions.html 
-# Required: clang-format-20+
+# Required: clang-format-20
 
 Language: Cpp
 Standard: Latest
@@ -54,6 +54,14 @@ AlignOperands: AlignAfterOperator
 
 # Brace style - Custom with all braces on new line
 BreakBeforeBraces: Allman
+
+# Inheritance list - break after each comma when too long
+BreakInheritanceList: AfterComma
+
+# Constructor initializer list - each initializer on its own line
+# Colon on new line, same line as first initializer
+BreakConstructorInitializers: BeforeColon
+PackConstructorInitializers: Never
 
 # Attributes/macros on separate line
 BreakAfterAttributes: Always

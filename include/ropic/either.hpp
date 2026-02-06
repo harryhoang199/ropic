@@ -3,8 +3,9 @@
 
 #pragma once
 
-#include "detail/either_impl.hpp"
 #include "void.hpp"
+
+#include "detail/either/either_impl.hpp"
 
 namespace ropic
 {
@@ -15,12 +16,12 @@ namespace ropic
  * using the Railway Oriented Programming pattern. Supports both direct value
  * construction and C++20 coroutines with automatic error propagation.
  *
- * When DATA is `void`, the type automatically substitutes `Void` to maintain
+ * When VALUE is `void`, the type automatically substitutes `Void` to maintain
  * variant compatibility. Use `Either<Void, ERROR>` or `Either<void, ERROR>`
  * for operations that succeed without returning a value.
  *
- * @tparam DATA The success value type. If void, substituted with Void.
- * @tparam ERROR The error type. Must differ from DATA.
+ * @tparam VALUE The success value type. If void, substituted with Void.
+ * @tparam ERROR The error type. Must differ from VALUE.
  *
  * @see detail::EitherImpl for implementation details.
  * @see Void for void-like success value.
@@ -43,13 +44,13 @@ namespace ropic
  * if (auto err = result.error()) {
  *     std::cout << err->message();
  * } else {
- *     std::cout << *result.data();
+ *     std::cout << *result.value();
  * }
  * @endcode
  */
-template <typename DATA, typename ERROR>
+template <typename VALUE, typename ERROR>
 using Either = std::conditional_t<
-    std::is_same_v<DATA, void>,
+    std::is_same_v<VALUE, void>,
     detail::EitherImpl<Void, ERROR>,
-    detail::EitherImpl<DATA, ERROR>>;
+    detail::EitherImpl<VALUE, ERROR>>;
 } // namespace ropic

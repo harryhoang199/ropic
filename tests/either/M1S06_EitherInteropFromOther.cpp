@@ -11,7 +11,7 @@
 // Simple Task Coroutine Type for Testing Interop
 // =============================================================================
 
-// NOLINTBEGIN(readability-magic-numbers)
+// NOLINTBEGIN(readability-magic-numbers,readability-identifier-naming,readability-convert-member-functions-to-static)
 
 /// @brief A minimal Task coroutine type for testing interop scenarios.
 template <typename T>
@@ -29,13 +29,13 @@ struct SimpleTask
     }
 
     [[nodiscard]]
-    static auto initial_suspend() noexcept -> std::suspend_never
+    auto initial_suspend() noexcept -> std::suspend_never
     {
       return {};
     }
 
     [[nodiscard]]
-    static auto final_suspend() noexcept -> std::suspend_always
+    auto final_suspend() noexcept -> std::suspend_always
     {
       return {};
     }
@@ -48,7 +48,10 @@ struct SimpleTask
   using promise_type = Promise;
   std::coroutine_handle<Promise> handle;
 
-  explicit SimpleTask(std::coroutine_handle<Promise> h) : handle(h) {}
+  explicit SimpleTask(std::coroutine_handle<Promise> h)
+      : handle(h)
+  {
+  }
 
   ~SimpleTask()
   {
@@ -59,7 +62,8 @@ struct SimpleTask
   SimpleTask(const SimpleTask&) = delete;
   auto operator=(const SimpleTask&) -> SimpleTask& = delete;
 
-  SimpleTask(SimpleTask&& other) noexcept : handle(other.handle)
+  SimpleTask(SimpleTask&& other) noexcept
+      : handle(other.handle)
   {
     other.handle = nullptr;
   }
@@ -89,9 +93,10 @@ struct SimpleTask
 // Test Suite: Other Coroutines Invoking Either-Coroutine
 // =============================================================================
 
-TEST(EitherInteropFromOther, UNIT_029_TaskAwaitsEitherSuccess)
+TEST(M1S06_EitherInteropFromOther, U01_TaskAwaitsEitherSuccess)
 {
-  RecordProperty("id", "0.02-UNIT-029");
+  RecordProperty("id", "M1-S06-U01");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc", "Task coroutine co_awaits Either and receives Either object");
 
@@ -99,16 +104,17 @@ TEST(EitherInteropFromOther, UNIT_029_TaskAwaitsEitherSuccess)
   {
     auto either = co_await returnData(42);
     EXPECT_TRUE(either.done());
-    EXPECT_TRUE(either.data());
-    co_return *either.data();
+    EXPECT_TRUE(either.value());
+    co_return *either.value();
   }();
 
   EXPECT_EQ(task.result(), 42);
 }
 
-TEST(EitherInteropFromOther, UNIT_030_TaskAwaitsEitherError)
+TEST(M1S06_EitherInteropFromOther, U02_TaskAwaitsEitherError)
 {
-  RecordProperty("id", "0.02-UNIT-030");
+  RecordProperty("id", "M1-S06-U02");
+  RecordProperty("ver", "0.02");
   RecordProperty("desc", "Task coroutine co_awaits Either with error");
 
   auto task = []() -> SimpleTask<std::string>
@@ -122,9 +128,10 @@ TEST(EitherInteropFromOther, UNIT_030_TaskAwaitsEitherError)
   EXPECT_EQ(task.result(), "task error");
 }
 
-TEST(EitherInteropFromOther, UNIT_031_TaskAwaitsMultipleEithers)
+TEST(M1S06_EitherInteropFromOther, U03_TaskAwaitsMultipleEithers)
 {
-  RecordProperty("id", "0.02-UNIT-031");
+  RecordProperty("id", "M1-S06-U03");
+  RecordProperty("ver", "0.02");
   RecordProperty("desc", "Task coroutine co_awaits multiple Either objects");
 
   auto task = []() -> SimpleTask<int>
@@ -140,15 +147,16 @@ TEST(EitherInteropFromOther, UNIT_031_TaskAwaitsMultipleEithers)
     if (e1.error() || e2.error() || e3.error())
       co_return -1;
 
-    co_return *e1.data() + *e2.data() + *e3.data();
+    co_return *e1.value() + *e2.value() + *e3.value();
   }();
 
   EXPECT_EQ(task.result(), 60);
 }
 
-TEST(EitherInteropFromOther, UNIT_032_TaskAwaitsEitherMixedResults)
+TEST(M1S06_EitherInteropFromOther, U04_TaskAwaitsEitherMixedResults)
 {
-  RecordProperty("id", "0.02-UNIT-032");
+  RecordProperty("id", "M1-S06-U04");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc", "Task coroutine handles mixed Either success/error results");
 
@@ -159,21 +167,22 @@ TEST(EitherInteropFromOther, UNIT_032_TaskAwaitsEitherMixedResults)
 
     EXPECT_TRUE(success.done());
     EXPECT_TRUE(error.done());
-    EXPECT_TRUE(success.data());
+    EXPECT_TRUE(success.value());
     EXPECT_TRUE(error.error());
 
     if (error.error())
       co_return -1;
 
-    co_return *success.data();
+    co_return *success.value();
   }();
 
   EXPECT_EQ(task.result(), -1);
 }
 
-TEST(EitherInteropFromOther, UNIT_033_TaskAwaitsEitherVoid)
+TEST(M1S06_EitherInteropFromOther, U05_TaskAwaitsEitherVoid)
 {
-  RecordProperty("id", "0.02-UNIT-033");
+  RecordProperty("id", "M1-S06-U05");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc", "Task coroutine handles Either<Void, Error> correctly");
 
@@ -196,9 +205,10 @@ TEST(EitherInteropFromOther, UNIT_033_TaskAwaitsEitherVoid)
   EXPECT_TRUE(task.result());
 }
 
-TEST(EitherInteropFromOther, UNIT_034_TaskAwaitsNestedEither)
+TEST(M1S06_EitherInteropFromOther, U06_TaskAwaitsNestedEither)
 {
-  RecordProperty("id", "0.02-UNIT-034");
+  RecordProperty("id", "M1-S06-U06");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc", "Task coroutine co_awaits Either from nested Either coroutine");
 
@@ -206,16 +216,17 @@ TEST(EitherInteropFromOther, UNIT_034_TaskAwaitsNestedEither)
   {
     auto result = co_await level1(0);
     EXPECT_TRUE(result.done());
-    EXPECT_TRUE(result.data());
-    co_return *result.data();
+    EXPECT_TRUE(result.value());
+    co_return *result.value();
   }();
 
   EXPECT_EQ(task.result(), 5);
 }
 
-TEST(EitherInteropFromOther, UNIT_035_TaskAwaitsEitherLvalue)
+TEST(M1S06_EitherInteropFromOther, U07_TaskAwaitsEitherLvalue)
 {
-  RecordProperty("id", "0.02-UNIT-035");
+  RecordProperty("id", "M1-S06-U07");
+  RecordProperty("ver", "0.02");
   RecordProperty("desc", "Task coroutine co_awaits lvalue Either reference");
 
   auto task = []() -> SimpleTask<int>
@@ -224,11 +235,11 @@ TEST(EitherInteropFromOther, UNIT_035_TaskAwaitsEitherLvalue)
     // co_await lvalue - should return reference
     auto& ref = co_await either;
     EXPECT_TRUE(ref.done());
-    EXPECT_TRUE(ref.data());
-    co_return *ref.data();
+    EXPECT_TRUE(ref.value());
+    co_return *ref.value();
   }();
 
   EXPECT_EQ(task.result(), 42);
 }
 
-// NOLINTEND(readability-magic-numbers)
+// NOLINTEND(readability-magic-numbers,readability-identifier-naming,readability-convert-member-functions-to-static)

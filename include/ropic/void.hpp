@@ -11,7 +11,7 @@ namespace ropic::detail
  * @enum Unit
  * @brief Unit type representing a successful void-like operation.
  *
- * Use this type as the DATA parameter for Either when the operation
+ * Use this type as the VALUE parameter for Either when the operation
  * does not return a meaningful value, e.g., `Either<Void, Error>`.
  */
 enum class Unit : std::uint8_t
@@ -22,13 +22,31 @@ enum class Unit : std::uint8_t
 
 namespace ropic
 {
-/// @brief Type alias for Unit, used as DATA type for void-like Either
-/// operations.
+/**
+ * @brief Type alias for Unit, used as VALUE type for void-like Either
+ * operations.
+ */
 using Void = detail::Unit;
 
-/// @brief Convenience constant for returning success from void-like operations.
+/**
+ * @brief Convenience constant for returning success from void-like operations.
+ *
+ * Use `co_return OK;` in coroutines with `Either<Void, ERROR>` return type.
+ *
+ * @code
+ * Either<Void, Error> doSomething() {
+ *     // ... perform operation ...
+ *     co_return OK;  // Signal success
+ * }
+ * @endcode
+ */
 constexpr Void OK = detail::Unit::OK;
 
-/// @brief Alias for OK constant.
+/**
+ * @brief Alias for OK constant.
+ *
+ * Provided for semantic clarity when `VOID` reads better than `OK` in context.
+ * Functionally identical to `OK`.
+ */
 constexpr Void VOID = detail::Unit::OK;
 } // namespace ropic

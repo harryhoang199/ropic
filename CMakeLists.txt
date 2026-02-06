@@ -11,6 +11,9 @@ project(ropic
   LANGUAGES CXX
 )
 
+message(STATUS "================================================================")
+message(STATUS "'${PROJECT_NAME}' v${PROJECT_VERSION} in ${CMAKE_CURRENT_SOURCE_DIR}")
+
 # cmake_policy(SET CMP0167 NEW)
 
 #  CHECK FOR GIT (Required on ALL platforms for FetchContent) ---
@@ -295,12 +298,12 @@ if(MSVC)
                                 # Simple and reliable, no extra setup needed
 
     # === Debug: Sanitizers (VS2019 16.9+) ===
-    # $<$<CONFIG:Debug>:/fsanitize=address>  # AddressSanitizer: more powerful but requires:
+    $<$<CONFIG:Debug>:/fsanitize=address>  # AddressSanitizer: more powerful but requires:
                                              # - ASan runtime DLLs in PATH
                                              # - Disable incremental linking (/INCREMENTAL:NO)
                                              # - Use /Zi instead of /ZI (no Edit and Continue)
                                              # Uncomment and fix linker settings if needed
-    $<$<CONFIG:Debug>:/fsanitize=address>
+    $<$<CONFIG:Debug>:/fsanitize=undefined>
 
     #############################################################################
     # MSVC: Release Configuration
@@ -381,15 +384,13 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
                                 # Larger binaries but best debugging experience
 
     # === Debug: Sanitizers ===
-    # AddressSanitizer: Detects memory errors at runtime
-    $<$<CONFIG:Debug>:-fsanitize=address>   # Buffer overflows, use-after-free, memory leaks
+    # Note: Address/Thread sanitizers are now controlled via CMake presets
+    # Use config-clang-debug-asan or config-clang-debug-tsan presets
     $<$<CONFIG:Debug>:-fsanitize=undefined> # Undefined Behavior Sanitizer:
                                             # - Signed integer overflow
                                             # - Null pointer dereference
                                             # - Invalid shifts, division by zero
                                             # - Misaligned pointer access
-    $<$<CONFIG:Debug>:-fno-omit-frame-pointer>  # Keep frame pointers for better stack traces
-                                                # Required for accurate sanitizer reports
 
     #############################################################################
     # GCC: Release Configuration
@@ -439,7 +440,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     #############################################################################
     # Debug Configuration
     #############################################################################
-    $<$<CONFIG:Debug>:-fsanitize=address>   # Link AddressSanitizer runtime
+    # Note: Address/Thread sanitizers are now controlled via CMake presets
     $<$<CONFIG:Debug>:-fsanitize=undefined> # Link UndefinedBehaviorSanitizer runtime
 
     #############################################################################
@@ -470,9 +471,9 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "
                                             # defined in system headers)
 
     # === Debug: Sanitizers ===
-    $<$<CONFIG:Debug>:-fsanitize=address>   # AddressSanitizer for memory errors
+    # Note: Address/Thread sanitizers are now controlled via CMake presets
+    # Use config-clang-debug-asan or config-clang-debug-tsan presets
     $<$<CONFIG:Debug>:-fsanitize=undefined> # UndefinedBehaviorSanitizer
-    $<$<CONFIG:Debug>:-fno-omit-frame-pointer>  # Keep frame pointers for stack traces
 
     #############################################################################
     # Clang: Release Configuration
@@ -510,7 +511,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "
     #############################################################################
     # Debug Configuration
     #############################################################################
-    $<$<CONFIG:Debug>:-fsanitize=address>   # Link AddressSanitizer runtime
+    # Note: Address/Thread sanitizers are now controlled via CMake presets
     $<$<CONFIG:Debug>:-fsanitize=undefined> # Link UndefinedBehaviorSanitizer runtime
 
     #############################################################################
@@ -672,8 +673,6 @@ install(
 ###############################################################################
 # Print information
 ###############################################################################
-message(STATUS "================================================================")
-message(STATUS "'${PROJECT_NAME}' v${PROJECT_VERSION} in ${CMAKE_CURRENT_SOURCE_DIR}")
 message(STATUS "----------------------------------------------------------------")
 
 message(STATUS "CMake system prefix paths:")
@@ -709,4 +708,3 @@ get_target_property(INCLUDE_DIRS ropic INTERFACE_INCLUDE_DIRECTORIES)
 foreach(include_dir ${INCLUDE_DIRS})
   message(STATUS "  ${include_dir}")
 endforeach()
-message(STATUS "================================================================")

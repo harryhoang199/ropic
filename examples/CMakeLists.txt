@@ -2,6 +2,9 @@
 cmake_minimum_required(VERSION 3.28)
 project(ropic-examples LANGUAGES CXX)
 
+message(STATUS "================================================================")
+message(STATUS "'${PROJECT_NAME}' in ${CMAKE_CURRENT_SOURCE_DIR}")
+
 ###############################################################################
 # Detect and collect source files                                             #
 ###############################################################################
@@ -50,8 +53,6 @@ install(
 ###############################################################################
 # Print information                                                           #
 ###############################################################################
-message(STATUS "================================================================")
-message(STATUS "'${PROJECT_NAME}' in ${CMAKE_CURRENT_SOURCE_DIR}")
 message(STATUS "----------------------------------------------------------------")
 
 message(STATUS "Source files:")
@@ -71,4 +72,3 @@ get_target_property(LINK_LIBS ropic-examples LINK_LIBRARIES)
 foreach(lib ${LINK_LIBS})
   message(STATUS "  ${lib}")
 endforeach()
-message(STATUS "================================================================")

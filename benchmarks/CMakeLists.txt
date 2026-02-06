@@ -2,6 +2,9 @@
 cmake_minimum_required(VERSION 3.28)
 project(ropic-benchmarks LANGUAGES CXX)
 
+message(STATUS "================================================================")
+message(STATUS "'${PROJECT_NAME}' in ${CMAKE_CURRENT_SOURCE_DIR}")
+
 ###############################################################################
 # Fetch Google Benchmark                                                      #
 ###############################################################################
@@ -107,8 +110,5 @@ set_target_properties(ropic-benchmarks PROPERTIES
 ###############################################################################
 # Print information                                                           #
 ###############################################################################
-message(STATUS "================================================================")
-message(STATUS "'${PROJECT_NAME}' in ${CMAKE_CURRENT_SOURCE_DIR}")
 message(STATUS "----------------------------------------------------------------")
 message(STATUS "Benchmark executable: ropic-benchmarks")
-message(STATUS "================================================================")

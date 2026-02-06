@@ -82,31 +82,38 @@ auto chainedIfElse(double value) noexcept -> std::optional<double>
 // Benchmark Functions
 // =============================================================================
 
+template <int DEPTH>
+static void BM_ChainedOperations_Coawait_Impl(benchmark::State& state)
+{
+  for (auto _ : state)
+  {
+    auto result = chainedCoawait<DEPTH>(1.0);
+    benchmark::DoNotOptimize(result);
+  }
+  state.SetItemsProcessed(state.iterations() * DEPTH);
+}
+
 static void BM_ChainedOperations_Coawait(benchmark::State& state)
 {
   const int depth = static_cast<int>(state.range(0));
 
-  for (auto _ : state)
+  switch (depth)
   {
-    Either<double, std::string> result{0.0};
-    switch (depth)
-    {
-    case 3:
-      result = chainedCoawait<3>(1.0);
-      break;
-    case 5:
-      result = chainedCoawait<5>(1.0);
-      break;
-    case 10:
-      result = chainedCoawait<10>(1.0);
-      break;
-    case 20:
-      result = chainedCoawait<20>(1.0);
-      break;
-    }
-    benchmark::DoNotOptimize(result);
+  case 3:
+    BM_ChainedOperations_Coawait_Impl<3>(state);
+    break;
+  case 5:
+    BM_ChainedOperations_Coawait_Impl<5>(state);
+    break;
+  case 10:
+    BM_ChainedOperations_Coawait_Impl<10>(state);
+    break;
+  case 20:
+    BM_ChainedOperations_Coawait_Impl<20>(state);
+    break;
+  default:
+    break;
   }
-  state.SetItemsProcessed(state.iterations() * depth);
 }
 
 static void BM_ChainedOperations_Throw(benchmark::State& state)

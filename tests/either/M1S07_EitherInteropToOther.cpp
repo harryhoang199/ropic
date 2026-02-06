@@ -1,84 +1,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025 ropic contributors
 
-#include <coroutine>
 #include <gtest/gtest.h>
 
+#include "TestAwaiters.hpp"
 #include "TestHelpers.hpp"
 
-// =============================================================================
-// Custom Awaiters for Testing
-// =============================================================================
-
-// NOLINTBEGIN(readability-magic-numbers)
-
-/// @brief A simple awaiter that suspends and stores the coroutine handle.
-struct ManualResumeAwaiter
-{
-  std::coroutine_handle<> handle = nullptr;
-
-  [[nodiscard]]
-  static auto await_ready() noexcept -> bool
-  {
-    return false;
-  }
-
-  auto await_suspend(std::coroutine_handle<> h) noexcept -> bool
-  {
-    handle = h;
-    return true;
-  }
-
-  static void await_resume() noexcept {}
-
-  void resume()
-  {
-    if (handle)
-      handle.resume();
-  }
-};
-
-/// @brief An awaiter that returns a value after manual resume.
-template <typename T>
-struct ManualResumeAwaiterWithValue
-{
-  std::coroutine_handle<> handle = nullptr;
-  T value;
-
-  explicit ManualResumeAwaiterWithValue(T v) : value(std::move(v)) {}
-
-  [[nodiscard]]
-  static auto await_ready() noexcept -> bool
-  {
-    return false;
-  }
-
-  auto await_suspend(std::coroutine_handle<> h) noexcept -> bool
-  {
-    handle = h;
-    return true;
-  }
-
-  [[nodiscard]]
-  auto await_resume() noexcept -> T
-  {
-    return std::move(value);
-  }
-
-  void resume()
-  {
-    if (handle)
-      handle.resume();
-  }
-};
+// NOLINTBEGIN(readability-magic-numbers,readability-identifier-naming,readability-convert-member-functions-to-static)
 
 // =============================================================================
 // Test Suite: Either-Coroutine Invoking Other Coroutines
 // =============================================================================
 
-TEST(EitherInteropToOther, UNIT_036_EitherAwaitsCustomAwaiter)
+TEST(M1S07_EitherInteropToOther, U01_EitherAwaitsCustomAwaiter)
 {
-  RecordProperty("id", "0.02-UNIT-036");
+  RecordProperty("id", "M1-S07-U01");
+  RecordProperty("ver", "0.02");
   RecordProperty("desc", "Either coroutine co_awaits custom awaiter");
 
   ManualResumeAwaiter awaiter;
@@ -92,19 +29,20 @@ TEST(EitherInteropToOther, UNIT_036_EitherAwaitsCustomAwaiter)
   auto either = coro();
 
   EXPECT_FALSE(either.done());
-  EXPECT_FALSE(either.data());
+  EXPECT_FALSE(either.value());
   EXPECT_FALSE(either.error());
 
   awaiter.resume();
 
   EXPECT_TRUE(either.done());
-  EXPECT_TRUE(either.data());
-  EXPECT_EQ(*either.data(), 42);
+  EXPECT_TRUE(either.value());
+  EXPECT_EQ(*either.value(), 42);
 }
 
-TEST(EitherInteropToOther, UNIT_037_EitherAwaitsValueAwaiter)
+TEST(M1S07_EitherInteropToOther, U02_EitherAwaitsValueAwaiter)
 {
-  RecordProperty("id", "0.02-UNIT-037");
+  RecordProperty("id", "M1-S07-U02");
+  RecordProperty("ver", "0.02");
   RecordProperty("desc", "Either coroutine receives value from custom awaiter");
 
   ManualResumeAwaiterWithValue<int> awaiter{100};
@@ -122,13 +60,14 @@ TEST(EitherInteropToOther, UNIT_037_EitherAwaitsValueAwaiter)
   awaiter.resume();
 
   EXPECT_TRUE(either.done());
-  EXPECT_TRUE(either.data());
-  EXPECT_EQ(*either.data(), 105);
+  EXPECT_TRUE(either.value());
+  EXPECT_EQ(*either.value(), 105);
 }
 
-TEST(EitherInteropToOther, UNIT_038_EitherAwaitsMultipleAwaiters)
+TEST(M1S07_EitherInteropToOther, U03_EitherAwaitsMultipleAwaiters)
 {
-  RecordProperty("id", "0.02-UNIT-038");
+  RecordProperty("id", "M1-S07-U03");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc",
       "Either coroutine co_awaits multiple custom awaiters in sequence");
@@ -152,13 +91,14 @@ TEST(EitherInteropToOther, UNIT_038_EitherAwaitsMultipleAwaiters)
 
   awaiter2.resume();
   EXPECT_TRUE(either.done());
-  EXPECT_TRUE(either.data());
-  EXPECT_EQ(*either.data(), 30);
+  EXPECT_TRUE(either.value());
+  EXPECT_EQ(*either.value(), 30);
 }
 
-TEST(EitherInteropToOther, UNIT_039_EitherAwaitsMixedAwaitables)
+TEST(M1S07_EitherInteropToOther, U04_EitherAwaitsMixedAwaitables)
 {
-  RecordProperty("id", "0.02-UNIT-039");
+  RecordProperty("id", "M1-S07-U04");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc",
       "Either coroutine mixes custom awaiters with Either error propagation");
@@ -179,13 +119,14 @@ TEST(EitherInteropToOther, UNIT_039_EitherAwaitsMixedAwaitables)
   awaiter.resume();
 
   EXPECT_TRUE(either.done());
-  EXPECT_TRUE(either.data());
-  EXPECT_EQ(*either.data(), 60);
+  EXPECT_TRUE(either.value());
+  EXPECT_EQ(*either.value(), 60);
 }
 
-TEST(EitherInteropToOther, UNIT_040_EitherAwaitsCustomThenPropagatesError)
+TEST(M1S07_EitherInteropToOther, U05_EitherAwaitsCustomThenPropagatesError)
 {
-  RecordProperty("id", "0.02-UNIT-040");
+  RecordProperty("id", "M1-S07-U05");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc",
       "Either coroutine awaits custom awaiter then propagates Either error");
@@ -211,9 +152,10 @@ TEST(EitherInteropToOther, UNIT_040_EitherAwaitsCustomThenPropagatesError)
   EXPECT_EQ(*either.error(), "after custom");
 }
 
-TEST(EitherInteropToOther, UNIT_041_EitherAwaitsVoidAwaiter)
+TEST(M1S07_EitherInteropToOther, U06_EitherAwaitsVoidAwaiter)
 {
-  RecordProperty("id", "0.02-UNIT-041");
+  RecordProperty("id", "M1-S07-U06");
+  RecordProperty("ver", "0.02");
   RecordProperty(
       "desc", "Either<Void, Error> coroutine co_awaits custom awaiter");
 
@@ -235,4 +177,4 @@ TEST(EitherInteropToOther, UNIT_041_EitherAwaitsVoidAwaiter)
   EXPECT_FALSE(either.error());
 }
 
-// NOLINTEND(readability-magic-numbers)
+// NOLINTEND(readability-magic-numbers,readability-identifier-naming,readability-convert-member-functions-to-static)

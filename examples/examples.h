@@ -21,7 +21,9 @@ inline auto trim(const std::string& str) -> Result<std::string>
 {
   const auto start = str.find_first_not_of(" \t\n\r\f\v");
   if (start == std::string::npos)
-    co_return {ErrorTag::VALIDATION, "String is empty after trimming"};
+  {
+    co_return Error{ErrorTag::VALIDATION, "String is empty after trimming"};
+  }
 
   const auto end = str.find_last_not_of(" \t\n\r\f\v");
   co_return str.substr(start, end - start + 1);
@@ -36,8 +38,7 @@ inline auto parseDouble(std::string str) -> Result<double>
 {
   try
   {
-    auto trimEither = trim(str);
-    std::string& trimmed1 = co_await trimEither;
+    std::string trimmed1 = co_await trim(str);
 
     co_return std::stod(trimmed1);
   }
@@ -77,13 +78,12 @@ inline auto divideStr(
 {
   std::cout << "x = " << numeratorStr << ", y = " << denominatorStr << "\n";
 
-  auto xEither = parseDouble(numeratorStr);
-  double x = co_await xEither;
+  double x = co_await parseDouble(numeratorStr);
 
   auto yEither = parseDouble(denominatorStr);
   if (auto err = yEither.error())
     co_return *err;
-  double y = *(yEither.data());
+  double y = *(yEither.value());
 
   double result = co_await divide(x, y);
 
@@ -312,6 +312,23 @@ batchProcess(const std::vector<std::pair<std::string, std::string>>& inputs)
 
 #include "tasks.hpp"
 
+template <typename AWAITER = examples::AsyncFetch>
+inline auto fetchStrings(
+    std::string numeratorStr,
+    std::string denominatorStr,
+    std::shared_ptr<std::mutex> mutex)
+    -> Result<std::pair<std::string, std::string>>
+{
+  // co_await non-Either awaitables - works because EitherPromise
+  // has a pass-through await_transform for non-Either types.
+  // Simulate fetching both operands from async sources.
+  std::string fetchedNum = co_await AWAITER{std::move(numeratorStr), mutex};
+
+  std::string fetchedDen = co_await AWAITER{std::move(denominatorStr), mutex};
+
+  co_return {fetchedNum, fetchedDen};
+}
+
 /**
  * @brief Simulates async fetch of both operands, then divides.
  * @param numeratorStr The numerator value to "fetch" asynchronously.
@@ -327,21 +344,33 @@ batchProcess(const std::vector<std::pair<std::string, std::string>>& inputs)
  * and divided using standard Either operations with automatic error
  * propagation.
  */
+template <typename AWAITER = examples::AsyncFetch>
 inline auto asyncDivideStr(
     std::string numeratorStr,
-    std::string denominatorStr) -> Result<double>
+    std::string denominatorStr,
+    std::shared_ptr<std::mutex> mutex) -> Result<double>
 {
-  // co_await non-Either awaitables - works because EitherPromise
-  // has a pass-through await_transform for non-Either types.
-  // Simulate fetching both operands from async sources.
-  std::string fetchedNumerator =
-      co_await examples::AsyncFetch{std::move(numeratorStr)};
-
-  std::string fetchedDenominator =
-      co_await examples::AsyncFetch{std::move(denominatorStr)};
+  auto [numStr, denStr] = co_await fetchStrings<AWAITER>(
+      std::move(numeratorStr), std::move(denominatorStr), mutex);
 
   // Now use standard Either operations - errors propagate automatically
-  double result = co_await divideStr(fetchedNumerator, fetchedDenominator);
+  double res = co_await divideStr(numStr, denStr);
 
-  co_return result;
+  co_return res;
+}
+
+template <typename AWAITER = examples::AsyncFetch>
+inline auto asyncCrossRatio(
+    std::string n1,
+    std::string d1,
+    std::string n2,
+    std::string d2,
+    std::shared_ptr<std::mutex> mutex) -> Result<double>
+{
+  double r1 =
+      co_await asyncDivideStr<AWAITER>(std::move(n1), std::move(d1), mutex);
+  double r2 =
+      co_await asyncDivideStr<AWAITER>(std::move(n2), std::move(d2), mutex);
+  double crossRatio = co_await divide(r1, r2);
+  co_return crossRatio;
 }

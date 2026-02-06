@@ -104,6 +104,38 @@
       }
     },
     {
+      "name": "config-clang-debug-asan",
+      "inherits": [
+        ".base",
+        ".ninja",
+        ".clang"
+      ],
+      "displayName": "Clang Debug ASan",
+      "description": "Use Clang in Debug mode with AddressSanitizer",
+      "binaryDir": "${sourceDir}/build/clang-debug-asan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address"
+      }
+    },
+    {
+      "name": "config-clang-debug-tsan",
+      "inherits": [
+        ".base",
+        ".ninja",
+        ".clang"
+      ],
+      "displayName": "Clang Debug TSan",
+      "description": "Use Clang in Debug mode with ThreadSanitizer",
+      "binaryDir": "${sourceDir}/build/clang-debug-tsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-fsanitize=thread",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread"
+      }
+    },
+    {
       "name": "config-clang-release",
       "inherits": [
         ".base",
@@ -194,7 +226,19 @@
       "name": "build-clang-debug",
       "inherits": ".build-base",
       "configurePreset": "config-clang-debug",
-      "description": "Build with Clang in Debug mode"
+      "description": "Build with Clang in Debug mode without ASan or TSan"
+    },
+    {
+      "name": "build-clang-debug-asan",
+      "inherits": ".build-base",
+      "configurePreset": "config-clang-debug-asan",
+      "description": "Build with Clang in Debug mode with ASan"
+    },
+    {
+      "name": "build-clang-debug-tsan",
+      "inherits": ".build-base",
+      "configurePreset": "config-clang-debug-tsan",
+      "description": "Build with Clang in Debug mode with TSan"
     },
     {
       "name": "build-clang-release",

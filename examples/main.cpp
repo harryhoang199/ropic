@@ -1,22 +1,24 @@
-// Railway Oriented Programming with C++20 Coroutines
-//
-// File organization:
-//   - src/error.h     : Error types (ErrorTag, Error) and utilities
-//   - src/either.h    : Either<ERROR, DATA> coroutine template for ROP
-//   - src/examples.h  : Example coroutine functions demonstrating usage
-//   - Task.hpp        : Task coroutine type for async integration
-//   - Generator.hpp   : Generator coroutine type for streaming integration
-//   - main.cpp        : Test cases and main function (this file)
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 ropic contributors
 
 #include <cassert>
+#include <coroutine>
 #include <iostream>
 #include <list>
+#include <memory>
+#include <mutex>
 #include <vector>
 
+#include "Generator.hpp"
 #include "examples.h"
 #include "tasks.hpp"
 
-#include "Generator.hpp"
+std::coroutine_handle<> examples::AsyncFetchForFlowTesting::resumeHandle =
+    nullptr;
+
+std::coroutine_handle<>
+    examples::AsyncFetchForFlowTestingWithOuterHandle::outerHandle =
+        std::noop_coroutine();
 
 namespace
 {
@@ -64,10 +66,10 @@ auto computeInTask(std::string a, std::string b) -> examples::SimpleTask<double>
   if (result1.error() || result2.error())
     co_return kErrorSentinel;
 
-  auto data1 = result1.data();
-  auto data2 = result2.data();
+  auto data1 = result1.value();
+  auto data2 = result2.value();
   if (data1 && data2)
-    co_return data1.value() * kMultiplier * data2.value();
+    co_return data1.value() * kMultiplier* data2.value();
 
   co_return kErrorSentinel;
 }
@@ -94,8 +96,10 @@ void testVoidUsingData();
 void testComplexComposition();
 void testTaskIntegration();
 void testGeneratorIntegration();
-void testAsyncEitherIntegration();
-
+void testAsyncShallowCoAwait();
+void testAsyncNestedCoAwait();
+void testFlowOfAsyncCoro();
+void testFlowOfAsyncCoroWithOuterHandle();
 } // namespace
 
 // ==========================================
@@ -104,16 +108,26 @@ void testAsyncEitherIntegration();
 
 auto main() -> int
 {
+  auto exec = [](void (*func)(), bool skip = false)
+  {
+    if (skip)
+      return;
+    func();
+  };
+
   std::cout << "=== Testing Railway Oriented Programming ===\n\n";
 
-  testBasicDivision();
-  testVoidValidation();
-  testDataUsingVoid();
-  testVoidUsingData();
-  testComplexComposition();
-  testTaskIntegration();
-  testGeneratorIntegration();
-  testAsyncEitherIntegration();
+  exec(testBasicDivision);
+  exec(testVoidValidation);
+  exec(testDataUsingVoid);
+  exec(testVoidUsingData);
+  exec(testComplexComposition);
+  exec(testTaskIntegration);
+  exec(testGeneratorIntegration);
+  exec(testAsyncShallowCoAwait);
+  exec(testAsyncNestedCoAwait);
+  exec(testFlowOfAsyncCoro);
+  exec(testFlowOfAsyncCoroWithOuterHandle);
 
   std::cout << "=== All tests completed ===\n";
 
@@ -138,7 +152,7 @@ void testBasicDivision()
   if (auto err = task1.error())
     printError(*err);
   else
-    printSuccess("Result: " + std::to_string(*task1.data()));
+    printSuccess("Result: " + std::to_string(*task1.value()));
   std::cout << "\n";
 
   std::cout << "Test 2: divideStr(\".2\", \"0\") - division by zero\n";
@@ -152,6 +166,13 @@ void testBasicDivision()
   auto task3 = divideStr("abc", "5");
   assert(task3.done());
   if (auto err = task3.error())
+    printError(*err);
+  std::cout << "\n";
+
+  std::cout << "Test 3a: divideStr(\" \\n  \\t \", \"5\") - parse error\n";
+  auto task3a = divideStr(" \n  \t ", "5");
+  assert(task3a.done());
+  if (auto err = task3a.error())
     printError(*err);
   std::cout << "\n";
 }
@@ -194,7 +215,7 @@ void testDataUsingVoid()
   if (auto err = task7.error())
     printError(*err);
   else
-    printSuccess("sqrt(16) = " + std::to_string(*task7.data()));
+    printSuccess("sqrt(16) = " + std::to_string(*task7.value()));
   std::cout << "\n";
 
   std::cout << "Test 8: safeSqrt(-4.0) - validation fails\n";
@@ -210,7 +231,7 @@ void testDataUsingVoid()
   if (auto err = task9.error())
     printError(*err);
   else
-    printSuccess("Parsed: " + std::to_string(*task9.data()));
+    printSuccess("Parsed: " + std::to_string(*task9.value()));
   std::cout << "\n";
 
   std::cout << "Test 10: parsePositiveDouble(\"-5\") - validation fails\n";
@@ -275,7 +296,7 @@ void testComplexComposition()
   if (auto err = task16.error())
     printError(*err);
   else
-    printSuccess("Weighted average: " + std::to_string(*task16.data()));
+    printSuccess("Weighted average: " + std::to_string(*task16.value()));
   std::cout << "\n";
 
   std::cout << "Test 17: computeWeightedAverage - parse error\n";
@@ -352,33 +373,82 @@ void testGeneratorIntegration()
     if (auto err = result.error())
       printError(*err);
     else
-      printSuccess("Result = " + std::to_string(*result.data()));
+      printSuccess("Result = " + std::to_string(*result.value()));
     ++idx;
   }
   std::cout << "\n";
 }
 
-void testAsyncEitherIntegration()
+void testAsyncShallowCoAwait()
 {
-  std::cout << "--- Async Either Integration ---\n";
-  std::cout << "Demonstrates co_await on non-Either awaitables within Either\n";
+  std::cout << "--- Async Shallow co_await (asyncDivideStr) ---\n";
+  std::cout << "Demonstrates single-level co_await on non-Either awaitables\n";
   std::cout << "Each task simulates async fetch (~1s) then divides\n\n";
 
   // Launch all async tasks into a list
   // Using list allows efficient removal of completed tasks during iteration
-  std::list<Result<double>> tasks;
+  struct TaskEntry
+  {
+    Result<double> task;
+    std::string description;
+    std::shared_ptr<std::mutex> mutex;
 
-  std::cout << "Launching: asyncDivideStr(\" 42\", \"7\") - success case\n";
-  tasks.push_back(asyncDivideStr(" 42", "7"));
+    TaskEntry(
+        Result<double>&& t, std::string desc, std::shared_ptr<std::mutex> mtx)
+        : task(std::move(t)),
+          description(std::move(desc)),
+          mutex(std::move(mtx))
+    {
+    }
+  };
 
-  std::cout << "Launching: asyncDivideStr(\"100\", \"0\") - division by zero\n";
-  tasks.push_back(asyncDivideStr("100", "0"));
+  std::shared_ptr<std::mutex> mutex;
+  std::list<TaskEntry> tasks;
 
-  std::cout << "Launching: asyncDivideStr(\"abc\", \"5\") - parse error\n";
-  tasks.push_back(asyncDivideStr("abc", "5"));
+  {
+    mutex = std::make_shared<std::mutex>();
+    std::lock_guard lock(*mutex);
+    auto task = asyncDivideStr(" 42", "7", mutex);
+    tasks.emplace_back(
+        std::move(task),
+        R"(Launching: asyncDivideStr(" 42", "7") - success case)",
+        mutex);
+  }
 
-  std::cout << "Launching: asyncDivideStr(\"50\", \"2\") - success case\n";
-  tasks.push_back(asyncDivideStr("50", "2"));
+  {
+    mutex = std::make_shared<std::mutex>();
+    std::lock_guard lock(*mutex);
+    auto task = asyncDivideStr("100", "0", mutex);
+    tasks.emplace_back(
+        std::move(task),
+        R"(Launching: asyncDivideStr("100", "0") - division by zero)",
+        mutex);
+  }
+
+  {
+    mutex = std::make_shared<std::mutex>();
+    std::lock_guard lock(*mutex);
+    auto task = asyncDivideStr("abc", "5", mutex);
+    tasks.emplace_back(
+        std::move(task),
+        R"(Launching: asyncDivideStr("abc", "5") - parse error)",
+        mutex);
+  }
+
+  {
+    mutex = std::make_shared<std::mutex>();
+    std::lock_guard lock(*mutex);
+    auto task = asyncDivideStr("50", "2", mutex);
+    tasks.emplace_back(
+        std::move(task),
+        R"(Launching: asyncDivideStr("50", "2") - success case)",
+        mutex);
+  }
+
+  for (auto& task : tasks)
+  {
+    std::cout << task.description << "\n";
+  }
 
   std::cout << "\nPolling tasks until all complete...\n\n";
 
@@ -387,13 +457,19 @@ void testAsyncEitherIntegration()
   {
     for (auto it = tasks.begin(); it != tasks.end();)
     {
-      if (it->done())
+      bool done;
+      {
+        std::lock_guard lock(*(it->mutex));
+        done = it->task.done();
+      }
+
+      if (done)
       {
         std::cout << "Task completed: ";
-        if (auto err = it->error())
+        if (auto err = it->task.error())
           printError(*err);
         else
-          printSuccess("Result = " + std::to_string(*it->data()));
+          printSuccess("Result = " + std::to_string(*it->task.value()));
 
         std::cout << "\n";
         it = tasks.erase(it);
@@ -403,17 +479,225 @@ void testAsyncEitherIntegration()
         ++it;
       }
     }
+  }
 
-    if (!tasks.empty())
+  std::cout << "All async tasks completed.\n\n";
+}
+
+void testAsyncNestedCoAwait()
+{
+  std::cout << "--- Async Nested co_await (asyncCrossRatio) ---\n";
+  std::cout << "Demonstrates multi-level co_await (asyncCrossRatio calls "
+               "asyncDivideStr)\n";
+  std::cout << "Each task computes (n1/d1) / (n2/d2) with async fetches\n\n";
+
+  // Launch all async tasks into a list
+  // Using list allows efficient removal of completed tasks during iteration
+  struct TaskEntry
+  {
+    Result<double> task;
+    std::string description;
+    std::shared_ptr<std::mutex> mutex;
+
+    TaskEntry(
+        Result<double>&& t, std::string desc, std::shared_ptr<std::mutex> mtx)
+        : task(std::move(t)),
+          description(std::move(desc)),
+          mutex(std::move(mtx))
     {
-      constexpr int kPollIntervalMs = 100;
-      std::this_thread::sleep_for(std::chrono::milliseconds(kPollIntervalMs));
+    }
+  };
+
+  std::shared_ptr<std::mutex> mutex;
+  std::list<TaskEntry> tasks;
+
+  {
+    mutex = std::make_shared<std::mutex>();
+    std::lock_guard lock(*mutex);
+    auto task = asyncCrossRatio(" 10", "2", "20", "4", mutex);
+    tasks.emplace_back(
+        std::move(task),
+        R"(Launching: asyncCrossRatio(" 10", "2", "20", "4") - success
+        case)",
+        mutex);
+  }
+
+  {
+    mutex = std::make_shared<std::mutex>();
+    std::lock_guard lock(*mutex);
+    auto task = asyncCrossRatio("abc", "2", "20", "4", mutex);
+    tasks.emplace_back(
+        std::move(task),
+        R"(Launching: asyncCrossRatio("abc", "2", "20", "4") - parse
+        error)",
+        mutex);
+  }
+
+  {
+    mutex = std::make_shared<std::mutex>();
+    std::lock_guard lock(*mutex);
+    auto task = asyncCrossRatio("10 ", "2", ".0", "4", mutex);
+    tasks.emplace_back(
+        std::move(task),
+        R"(Launching: asyncCrossRatio("10 ", "2", ".0", "4") - div by
+        zero)",
+        mutex);
+  }
+
+  for (auto& task : tasks)
+  {
+    std::cout << task.description << "\n";
+  }
+
+  std::cout << "\nPolling tasks until all complete...\n\n";
+
+  // Poll loop: check done() on each task, remove when complete
+  while (!tasks.empty())
+  {
+    for (auto it = tasks.begin(); it != tasks.end();)
+    {
+      bool done;
+      {
+        std::lock_guard lock(*(it->mutex));
+        done = it->task.done();
+      }
+
+      if (!done)
+      {
+        ++it;
+        continue;
+      }
+
+      std::cout << "Task completed: ";
+      if (auto err = it->task.error())
+        printError(*err);
+      else
+        printSuccess("Result = " + std::to_string(*it->task.value()));
+
+      std::cout << "\n";
+      it = tasks.erase(it);
     }
   }
 
   std::cout << "All async tasks completed.\n\n";
 }
 
+void testFlowOfAsyncCoro()
+{
+  auto& h = examples::AsyncFetchForFlowTesting::resumeHandle;
+  h = nullptr;
+  std::cout
+      << "--- Async Nested co_await (demonstraing coro execution flow) ---\n"
+      << R"(Launching: asyncCrossRatio(" 10", "2", "20", "4") - success
+      case)"
+      << "\n";
+
+  std::shared_ptr<std::mutex> mutex = std::make_shared<std::mutex>();
+  auto task = asyncCrossRatio<examples::AsyncFetchForFlowTesting>(
+      " 10", "2", "20", "4", mutex);
+
+  while (true)
+  {
+    std::lock_guard lock(*mutex);
+    if (h)
+    {
+      h.resume();
+      h = nullptr;
+    }
+    if (task.done())
+      break;
+  }
+
+  std::cout << "Task completed: ";
+  if (auto err = task.error())
+    printError(*err);
+  else
+    printSuccess("Result = " + std::to_string(*task.value()));
+}
+
+void testFlowOfAsyncCoroWithOuterHandle()
+{
+  auto& resumeHandle =
+      examples::AsyncFetchForFlowTestingWithOuterHandle::resumeHandle;
+  auto& outerHandle =
+      examples::AsyncFetchForFlowTestingWithOuterHandle::outerHandle;
+
+  std::cout
+      << "--- Async Nested co_await (demonstraing coro execution flow with an "
+         "outer handle) ---\n"
+      << R"(Launching: asyncCrossRatio(" 10", "2", "20", "4") - success
+      case)"
+      << "\n";
+  struct Awaiter
+  {
+    std::coroutine_handle<> copyResumeHandle;
+    auto await_ready() const noexcept -> bool { return false; }
+
+    auto await_suspend(std::coroutine_handle<>) -> std::coroutine_handle<>
+    {
+      return copyResumeHandle;
+    }
+
+    void await_resume() {}
+  };
+
+  auto runTask = [](std::shared_ptr<std::mutex> mutex,
+                    examples::SimpleTask<int> simpleTask,
+                    std::string n1,
+                    std::string d1,
+                    std::string n2,
+                    std::string d2)
+  {
+    resumeHandle = nullptr;
+    outerHandle = simpleTask.handle;
+
+    auto eitherTask =
+        asyncCrossRatio<examples::AsyncFetchForFlowTestingWithOuterHandle>(
+            std::move(n1), std::move(d1), std::move(n2), std::move(d2), mutex);
+
+    while (true)
+    {
+      std::lock_guard lock(*mutex);
+      if (resumeHandle)
+      {
+        resumeHandle.resume();
+        resumeHandle = nullptr;
+      }
+      if (eitherTask.done())
+        break;
+    }
+    return eitherTask;
+  };
+
+  // ===== Task 1 =====
+  auto mutex1 = std::make_shared<std::mutex>();
+  auto simpleTask1 = [mutex1]() -> examples::SimpleTask<int>
+  {
+    std::coroutine_handle<> copyResumeHandle;
+    {
+      std::lock_guard lock(*mutex1);
+      copyResumeHandle = resumeHandle;
+    }
+    co_await Awaiter{copyResumeHandle};
+    co_return 1;
+  }();
+  auto eitherTask1 =
+      runTask(mutex1, std::move(simpleTask1), " 10", "2", "20", "4");
+
+  // ===== Task 2 =====
+  auto mutex2 = std::make_shared<std::mutex>();
+  auto simpleTask2 = []() -> examples::SimpleTask<int>
+  {
+    co_await Awaiter{std::noop_coroutine()};
+    co_return 1;
+  }();
+  auto eitherTask2 =
+      runTask(mutex2, std::move(simpleTask2), ".3", "5 ", "  -.7", "2");
+
+  std::cout << "Tasks completed:\n";
+  printSuccess("Task 1 result = " + std::to_string(*eitherTask1.value()));
+  printSuccess("Task 2 result = " + std::to_string(*eitherTask2.value()));
+}
 // NOLINTEND(readability-magic-numbers)
 
 } // namespace

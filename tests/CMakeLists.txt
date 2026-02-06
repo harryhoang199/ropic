@@ -10,6 +10,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 include(FetchContent)
 
 ###############################################################################
+message(STATUS "================================================================")
+message(STATUS "'${PROJECT_NAME}' in ${CMAKE_CURRENT_SOURCE_DIR}")
+
+###############################################################################
 # FetchContent for Google Test                                               #
 ###############################################################################
 FetchContent_Declare(
@@ -72,20 +76,47 @@ endforeach()
 ###############################################################################
 add_subdirectory(either)
 
+
 ###############################################################################
 # Print information                                                           #
 ###############################################################################
-message(STATUS "================================================================")
-message(STATUS "'${PROJECT_NAME}' in ${CMAKE_CURRENT_SOURCE_DIR}")
-message(STATUS "----------------------------------------------------------------")
+# Function to recursively retrieve all targets in a directory and its subdirectories
+function(get_all_targets_recursive _dir _out_var)
+    # 1. Get targets defined directly in the current directory
+    get_directory_property(_targets DIRECTORY "${_dir}" BUILDSYSTEM_TARGETS)
+    
+    # 2. Get list of subdirectories in the current directory
+    get_directory_property(_subdirs DIRECTORY "${_dir}" SUBDIRECTORIES)
 
-message(STATUS "Targets:")
-# Get and print all targets from the current directory
-get_property(local_targets DIRECTORY "${dir}" PROPERTY BUILDSYSTEM_TARGETS)
-foreach(tgt IN LISTS local_targets)
-  message(STATUS "  ${tgt}")
+    # 3. Recursively iterate through each subdirectory
+    foreach(_subdir ${_subdirs})
+        get_all_targets_recursive("${_subdir}" _subdir_targets)
+        list(APPEND _targets ${_subdir_targets})
+    endforeach()
+
+    # 4. Return the result list to the parent scope
+    set(${_out_var} ${_targets} PARENT_SCOPE)
+endfunction()
+
+message(STATUS "----------------------------------------------------------------")
+# Get all targets within the "tests" directory (recursive)
+get_all_targets_recursive("${dir}" ALL_TEST_TARGETS)
+
+message(STATUS "Found test targets: ${ALL_TEST_TARGETS}")
+
+# Apply definitions only to EXECUTABLE targets found
+foreach(tgt ${ALL_TEST_TARGETS})
+    # Check the target type (EXECUTABLE, STATIC_LIBRARY, SHARED_LIBRARY, etc.)
+    get_target_property(tgt_type ${tgt} TYPE)
+    
+    if (tgt_type STREQUAL "EXECUTABLE")
+        # Apply the testing flag specifically to this target
+        target_compile_definitions(${tgt} PRIVATE ROPIC_TESTING_MODE=1)
+        message(STATUS "Applied ROPIC_TESTING_MODE to: ${tgt}")
+    endif()
 endforeach()
 
+message(STATUS "----------------------------------------------------------------")
 message(STATUS "Subdirectories:")
 # Find subdirectories then get and print all targets from them
 get_property(subdirs DIRECTORY "${dir}" PROPERTY SUBDIRECTORIES)

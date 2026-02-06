@@ -93,7 +93,7 @@ std::optional<double> computeRatioIfElse(
 ### Basic Either Usage
 
 ```cpp
-// Function returning Either<DATA, Error> with data or error
+// Function returning Either<VALUE, Error> with data or error
 ropic::Either<int, Error> divide(int a, int b) noexcept {
     // co_return an `int` or an `Error`
     if (b == 0) {
@@ -102,12 +102,12 @@ ropic::Either<int, Error> divide(int a, int b) noexcept {
     co_return a / b;
 }
 
-// Using the result - always check done() before accessing error()/data()
+// Using the result - always check done() before accessing error()/value()
 auto result = divide(10, 2);
 assert(result.done());  // For synchronous coroutines, always true
 if (auto err = result.error()) {
     std::cerr << "Error: " << err->message() << '\n';
-} else if (auto val = result.data()) {
+} else if (auto val = result.value()) {
     std::cout << "Result: " << *val << '\n';
 }
 ```
@@ -128,7 +128,7 @@ ropic::Either<double, Error> divideStr(const std::string& numStr, const std::str
     if (auto err = y.error())
         co_return *err;
 
-    double result = co_await divide(x, *(y.data()));
+    double result = co_await divide(x, *(y.value()));
     co_return result;
 }
 ```
@@ -139,7 +139,7 @@ ropic::Either<double, Error> divideStr(const std::string& numStr, const std::str
 ropic::Either<std::vector<int>, Error> getWeights() noexcept;
 
 ropic::Either<double, Error> compute(const std::string& a, const std::string& b) noexcept {
-    // Use `co_await` with the `Either` template with a different `DATA` type
+    // Use `co_await` with the `Either` template with a different `VALUE` type
     // (the `ERROR` types must be the same)
     std::vector<int> weights = co_await getWeights();
     if (weights.size() < 2)
@@ -163,7 +163,7 @@ ropic::Either<ropic::Void, Error> saveConfig(const Config& cfg) noexcept {
 }
 
 auto result = saveConfig(config);
-assert(result.done());  // Always check done() before accessing error()/data()
+assert(result.done());  // Always check done() before accessing error()/value()
 if (auto err = result.error()) {
     std::cerr << "Save failed: " << err->message() << '\n';
 } else {
@@ -214,7 +214,7 @@ while (!task.done()) {
 if (auto err = task.error())
     std::cerr << "Error: " << err->message() << '\n';
 else
-    std::cout << "Result: " << *task.data() << '\n';
+    std::cout << "Result: " << *task.value() << '\n';
 ```
 
 **Using Either coroutines inside non-Either coroutines:**
@@ -234,7 +234,7 @@ Task<double> computeInTask(std::string a, std::string b) {
     auto result1 = co_await divideStr(a, b);
     auto result2 = co_await divideStr(b, a);
 
-    // Always check done() before accessing error()/data()
+    // Always check done() before accessing error()/value()
     if (!result1.done() || !result2.done())
         co_return -1.0;  // Error sentinel
 
@@ -242,7 +242,7 @@ Task<double> computeInTask(std::string a, std::string b) {
     if (result1.error() || result2.error())
         co_return -1.0;  // Error sentinel
 
-    co_return result1.data().value() * result2.data().value();
+    co_return result1.value().value() * result2.value().value();
 }
 
 // Run the task

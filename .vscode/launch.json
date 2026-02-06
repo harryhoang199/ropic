@@ -13,6 +13,17 @@
     }
   ],
   "configurations": [
+    // Linux OS (using CodeLLDB)
+    {
+      "name": "Launch Target (Linux)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${command:cmake.launchTargetPath}",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "ASAN_OPTIONS": "detect_leaks=0"
+      }
+    },
     // MSVC (Windows only - requires cpptools extension)
     {
       "name": "MSVC Debug",
@@ -31,17 +42,6 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "preLaunchTask": "${input:buildType}:vs2022-release"
-    },
-    // Linux OS (using CodeLLDB)
-    {
-      "name": "Launch Target (Linux)",
-      "type": "lldb",
-      "request": "launch",
-      "program": "${command:cmake.launchTargetPath}",
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "ASAN_OPTIONS": "detect_leaks=0"
-      }
     },
   ]
 }
