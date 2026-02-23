@@ -102,9 +102,9 @@ ropic::Either<int, Error> divide(int a, int b) noexcept {
     co_return a / b;
 }
 
-// Using the result - always check done() before accessing error()/value()
+// Using the result - always check state() before accessing error()/value()
 auto result = divide(10, 2);
-assert(result.done());  // For synchronous coroutines, always true
+assert(result.state() == ropic::CoroState::DONE);  // For synchronous coroutines, always true
 if (auto err = result.error()) {
     std::cerr << "Error: " << err->message() << '\n';
 } else if (auto val = result.value()) {
@@ -124,7 +124,7 @@ ropic::Either<double, Error> divideStr(const std::string& numStr, const std::str
 
     // Remove co_await to catch and handle error right here
     auto y = parseDouble(denStr);
-    assert(y.done());  // Synchronous coroutine is always done
+    assert(y.state() == ropic::CoroState::DONE);  // Synchronous coroutine is always done
     if (auto err = y.error())
         co_return *err;
 
@@ -163,7 +163,7 @@ ropic::Either<ropic::Void, Error> saveConfig(const Config& cfg) noexcept {
 }
 
 auto result = saveConfig(config);
-assert(result.done());  // Always check done() before accessing error()/value()
+assert(result.state() == ropic::CoroState::DONE);  // Always check state() before accessing error()/value()
 if (auto err = result.error()) {
     std::cerr << "Save failed: " << err->message() << '\n';
 } else {
@@ -175,41 +175,95 @@ if (auto err = result.error()) {
 
 Either coroutines can seamlessly integrate with other coroutine types in both directions.
 
-**Using non-Either awaitables inside Either coroutines:**
+**Using non-Either awaitables inside Either coroutines (Safe API):**
 
-The Either promise has a pass-through `await_transform` that allows `co_await` on any awaitable type. This enables integration with async operations like network fetches, file I/O, or custom awaitables.
+Either provides a Safe Awaitable API using `ropic::ResumeSource` for thread-safe integration with external async operations — no mutex required. An awaitable is "safe" when its `await_suspend` accepts a `ropic::ResumeSource` instead of a raw `std::coroutine_handle<>`. The library automatically manages coroutine lifecycle and synchronization.
 
 ```cpp
-// A custom awaitable that simulates async data fetching
+// A safe awaitable that simulates async data fetching
+// Key: await_suspend receives ResumeSource instead of coroutine_handle
+struct SafeAsyncFetch {
+    std::string data;
+    explicit SafeAsyncFetch(std::string data) : data(std::move(data)) {}
+
+    bool await_ready() { return false; }
+    void await_suspend(ropic::ResumeSource resumeSrc) {
+        // No mutex needed! ResumeSource handles thread-safe resume signaling
+        std::thread([src = std::move(resumeSrc)]() mutable {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            src.requestResume();  // Signal readiness — safe from any thread
+        }).detach();
+    }
+    std::string await_resume() { return std::move(data); }
+};
+
+// Either coroutine using safe awaitables
+ropic::Either<double, Error> asyncDivide(std::string numStr, std::string denStr) noexcept {
+    std::string fetchedNum = co_await SafeAsyncFetch{std::move(numStr)};
+    std::string fetchedDen = co_await SafeAsyncFetch{std::move(denStr)};
+    double result = co_await divideStr(fetchedNum, fetchedDen);
+    co_return result;
+}
+
+// Poll for completion — no mutex required thanks to Safe API
+auto task = asyncDivide("42", "7");
+while (true) {
+    switch (task.state()) {
+    case ropic::CoroState::DONE:
+        goto done;          // Task completed
+    case ropic::CoroState::READY:
+        task.resume();      // Resume the coroutine — ready to continue
+        break;
+    case ropic::CoroState::PENDING:
+        break;              // Still waiting for async operation
+    }
+}
+done:
+if (auto err = task.error())
+    std::cerr << "Error: " << err->message() << '\n';
+else
+    std::cout << "Result: " << *task.value() << '\n';
+```
+
+**Using non-Either awaitables inside Either coroutines (manual control):**
+
+If you prefer full control over coroutine resumption without using the Safe API, you can use standard `std::coroutine_handle<>` directly. This requires manual thread synchronization (e.g., mutex) to safely resume coroutines from other threads.
+
+```cpp
+// Example of using standard awaitables with manual locking
+// This requires a mutex and checking state() before accessing error()/value()
+
+std::mutex mtx;
+
 struct AsyncFetch {
-    std::string _data;
-    explicit AsyncFetch(std::string data) : _data(std::move(data)) {}
+    std::string data;
+    explicit AsyncFetch(std::string data) : data(std::move(data)) {}
 
     bool await_ready() { return false; }
     void await_suspend(std::coroutine_handle<> h) {
         std::thread([h] {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::lock_guard<std::mutex> lock(mtx);  // Manual locking required
             h.resume();
         }).detach();
     }
-    std::string await_resume() { return std::move(_data); }
+    std::string await_resume() { return std::move(data); }
 };
 
-// Either coroutine that uses non-Either awaitables
 ropic::Either<double, Error> asyncDivide(std::string numStr, std::string denStr) noexcept {
-    // co_await non-Either awaitables - works via pass-through await_transform
     std::string fetchedNum = co_await AsyncFetch{std::move(numStr)};
     std::string fetchedDen = co_await AsyncFetch{std::move(denStr)};
-
-    // Then use standard Either operations with automatic error propagation
     double result = co_await divideStr(fetchedNum, fetchedDen);
     co_return result;
 }
 
-// Poll for completion using done()
+// Poll for completion — mutex required for thread safety
 auto task = asyncDivide("42", "7");
-while (!task.done()) {
+while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::lock_guard<std::mutex> lock(mtx);
+    if (task.state() == ropic::CoroState::DONE)
+        break;
 }
 if (auto err = task.error())
     std::cerr << "Error: " << err->message() << '\n';
@@ -234,8 +288,9 @@ Task<double> computeInTask(std::string a, std::string b) {
     auto result1 = co_await divideStr(a, b);
     auto result2 = co_await divideStr(b, a);
 
-    // Always check done() before accessing error()/value()
-    if (!result1.done() || !result2.done())
+    // Always check state() before accessing error()/value()
+    if (result1.state() != ropic::CoroState::DONE 
+     || result2.state() != ropic::CoroState::DONE)
         co_return -1.0;  // Error sentinel
 
     // Manual error checking required in non-Either coroutines
