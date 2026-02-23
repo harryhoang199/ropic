@@ -15,17 +15,17 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            configure_preset: config-vs2022
-            build_preset: build-vs2022-release
-            test_preset: test-vs2022-release
+            configure_preset: config-vs2022-ci
+            build_preset: build-vs2022-ci
+            test_preset: test-vs2022-ci
           - os: ubuntu-latest
-            configure_preset: config-gcc-release
-            build_preset: build-gcc-release
-            test_preset: test-gcc-release
+            configure_preset: config-gcc-ci
+            build_preset: build-gcc-ci
+            test_preset: test-gcc-ci
           - os: ubuntu-latest
-            configure_preset: config-clang-release
-            build_preset: build-clang-release
-            test_preset: test-clang-release
+            configure_preset: config-clang-ci
+            build_preset: build-clang-ci
+            test_preset: test-clang-ci
 
     steps:
     - uses: actions/checkout@v4
@@ -38,9 +38,9 @@ jobs:
         env: true
         cached: true
 
-    - name: Install Ninja and ccache (Linux)
+    - name: Install Ninja (Linux)
       if: runner.os == 'Linux'
-      run: sudo apt-get install -y ninja-build ccache
+      run: sudo apt-get install -y ninja-build
 
     - name: Configure CMake
       run: >
@@ -48,7 +48,7 @@ jobs:
         ${{ contains(matrix.configure_preset, 'clang') && '-DCMAKE_CXX_FLAGS=-fuse-ld=lld' || '' }}
 
     - name: Build
-      run: cmake --build --preset ${{ matrix.build_preset }} --target either-tests
+      run: cmake --build --preset ${{ matrix.build_preset }}
 
     - name: Test
       run: ctest --preset ${{ matrix.test_preset }} -j8 --output-on-failure
@@ -61,13 +61,13 @@ jobs:
       matrix:
         include:
           - name: ASan
-            configure_preset: config-clang-debug-asan
-            build_preset: build-clang-debug-asan
-            test_preset: test-clang-debug-asan
+            configure_preset: config-clang-ci-asan
+            build_preset: build-clang-ci-asan
+            test_preset: test-clang-ci-asan
           - name: TSan
-            configure_preset: config-clang-debug-tsan
-            build_preset: build-clang-debug-tsan
-            test_preset: test-clang-debug-tsan
+            configure_preset: config-clang-ci-tsan
+            build_preset: build-clang-ci-tsan
+            test_preset: test-clang-ci-tsan
 
     name: Clang Debug ${{ matrix.name }}
 
@@ -81,14 +81,14 @@ jobs:
         env: true
         cached: true
 
-    - name: Install Ninja and ccache
-      run: sudo apt-get install -y ninja-build ccache
+    - name: Install Ninja
+      run: sudo apt-get install -y ninja-build
 
     - name: Configure CMake
       run: cmake --preset ${{ matrix.configure_preset }}
 
     - name: Build
-      run: cmake --build --preset ${{ matrix.build_preset }} --target either-tests
+      run: cmake --build --preset ${{ matrix.build_preset }}
 
     - name: Test
       run: ctest --preset ${{ matrix.test_preset }} -j8 --output-on-failure
