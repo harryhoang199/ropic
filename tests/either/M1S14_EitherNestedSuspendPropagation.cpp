@@ -70,7 +70,7 @@ auto outermost(
 // Group A — Error Propagation (layer3 co_return ERROR)
 // ---------------------------------------------------------------------------
 
-TEST(M1S14_EitherNestedSuspendPropagation, U01_SyncChainPropagatesError)
+TEST(M1S14EitherNestedSuspendPropagation, U01SyncChainPropagatesError)
 {
   RecordProperty("id", "M1-S14-U01");
   RecordProperty("ver", "0.05");
@@ -79,13 +79,12 @@ TEST(M1S14_EitherNestedSuspendPropagation, U01_SyncChainPropagatesError)
 
   auto result = outermost(nullptr, nullptr, nullptr, kReturnError);
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(*result.error(), "nested suspend error");
 }
 
-TEST(M1S14_EitherNestedSuspendPropagation, U02_Layer1SuspendedPropagatesError)
+TEST(M1S14EitherNestedSuspendPropagation, U02Layer1SuspendedPropagatesError)
 {
   RecordProperty("id", "M1-S14-U02");
   RecordProperty("ver", "0.05");
@@ -98,16 +97,15 @@ TEST(M1S14_EitherNestedSuspendPropagation, U02_Layer1SuspendedPropagatesError)
 
   auto result = outermost(&awaiterLayer1, nullptr, nullptr, kReturnError);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer1.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(*result.error(), "nested suspend error");
 }
 
-TEST(M1S14_EitherNestedSuspendPropagation, U03_Layer2SuspendedPropagatesError)
+TEST(M1S14EitherNestedSuspendPropagation, U03Layer2SuspendedPropagatesError)
 {
   RecordProperty("id", "M1-S14-U03");
   RecordProperty("ver", "0.05");
@@ -120,16 +118,15 @@ TEST(M1S14_EitherNestedSuspendPropagation, U03_Layer2SuspendedPropagatesError)
 
   auto result = outermost(nullptr, &awaiterLayer2, nullptr, kReturnError);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer2.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(*result.error(), "nested suspend error");
 }
 
-TEST(M1S14_EitherNestedSuspendPropagation, U04_Layer3SuspendedReturnsError)
+TEST(M1S14EitherNestedSuspendPropagation, U04Layer3SuspendedReturnsError)
 {
   RecordProperty("id", "M1-S14-U04");
   RecordProperty("ver", "0.05");
@@ -142,17 +139,15 @@ TEST(M1S14_EitherNestedSuspendPropagation, U04_Layer3SuspendedReturnsError)
 
   auto result = outermost(nullptr, nullptr, &awaiterLayer3, kReturnError);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer3.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(*result.error(), "nested suspend error");
 }
 
-TEST(
-    M1S14_EitherNestedSuspendPropagation, U05_Layer1And2SuspendedPropagateError)
+TEST(M1S14EitherNestedSuspendPropagation, U05Layer1And2SuspendedPropagateError)
 {
   RecordProperty("id", "M1-S14-U05");
   RecordProperty("ver", "0.05");
@@ -167,20 +162,18 @@ TEST(
   auto result =
       outermost(&awaiterLayer1, &awaiterLayer2, nullptr, kReturnError);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer1.resume();
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer2.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(*result.error(), "nested suspend error");
 }
 
-TEST(
-    M1S14_EitherNestedSuspendPropagation, U06_Layer1And3SuspendedPropagateError)
+TEST(M1S14EitherNestedSuspendPropagation, U06Layer1And3SuspendedPropagateError)
 {
   RecordProperty("id", "M1-S14-U06");
   RecordProperty("ver", "0.05");
@@ -195,20 +188,18 @@ TEST(
   auto result =
       outermost(&awaiterLayer1, nullptr, &awaiterLayer3, kReturnError);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer1.resume();
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer3.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(*result.error(), "nested suspend error");
 }
 
-TEST(
-    M1S14_EitherNestedSuspendPropagation, U07_Layer2And3SuspendedPropagateError)
+TEST(M1S14EitherNestedSuspendPropagation, U07Layer2And3SuspendedPropagateError)
 {
   RecordProperty("id", "M1-S14-U07");
   RecordProperty("ver", "0.05");
@@ -223,19 +214,18 @@ TEST(
   auto result =
       outermost(nullptr, &awaiterLayer2, &awaiterLayer3, kReturnError);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer2.resume();
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer3.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(*result.error(), "nested suspend error");
 }
 
-TEST(M1S14_EitherNestedSuspendPropagation, U08_AllLayersSuspendedPropagateError)
+TEST(M1S14EitherNestedSuspendPropagation, U08AllLayersSuspendedPropagateError)
 {
   RecordProperty("id", "M1-S14-U08");
   RecordProperty("ver", "0.05");
@@ -251,18 +241,17 @@ TEST(M1S14_EitherNestedSuspendPropagation, U08_AllLayersSuspendedPropagateError)
   auto result =
       outermost(&awaiterLayer1, &awaiterLayer2, &awaiterLayer3, kReturnError);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer1.resume();
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer2.resume();
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer3.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(*result.error(), "nested suspend error");
 }
 
@@ -270,7 +259,7 @@ TEST(M1S14_EitherNestedSuspendPropagation, U08_AllLayersSuspendedPropagateError)
 // Group B — Success Propagation (layer3 co_return OK)
 // ---------------------------------------------------------------------------
 
-TEST(M1S14_EitherNestedSuspendPropagation, U09_SyncChainPropagatesOk)
+TEST(M1S14EitherNestedSuspendPropagation, U09SyncChainPropagatesOk)
 {
   RecordProperty("id", "M1-S14-U09");
   RecordProperty("ver", "0.05");
@@ -279,12 +268,11 @@ TEST(M1S14_EitherNestedSuspendPropagation, U09_SyncChainPropagatesOk)
 
   auto result = outermost(nullptr, nullptr, nullptr, kReturnOk);
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
 }
 
-TEST(M1S14_EitherNestedSuspendPropagation, U10_Layer1SuspendedPropagatesOk)
+TEST(M1S14EitherNestedSuspendPropagation, U10Layer1SuspendedPropagatesOk)
 {
   RecordProperty("id", "M1-S14-U10");
   RecordProperty("ver", "0.05");
@@ -297,15 +285,14 @@ TEST(M1S14_EitherNestedSuspendPropagation, U10_Layer1SuspendedPropagatesOk)
 
   auto result = outermost(&awaiterLayer1, nullptr, nullptr, kReturnOk);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer1.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
 }
 
-TEST(M1S14_EitherNestedSuspendPropagation, U11_Layer2SuspendedPropagatesOk)
+TEST(M1S14EitherNestedSuspendPropagation, U11Layer2SuspendedPropagatesOk)
 {
   RecordProperty("id", "M1-S14-U11");
   RecordProperty("ver", "0.05");
@@ -318,15 +305,14 @@ TEST(M1S14_EitherNestedSuspendPropagation, U11_Layer2SuspendedPropagatesOk)
 
   auto result = outermost(nullptr, &awaiterLayer2, nullptr, kReturnOk);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer2.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
 }
 
-TEST(M1S14_EitherNestedSuspendPropagation, U12_Layer3SuspendedReturnsOk)
+TEST(M1S14EitherNestedSuspendPropagation, U12Layer3SuspendedReturnsOk)
 {
   RecordProperty("id", "M1-S14-U12");
   RecordProperty("ver", "0.05");
@@ -339,15 +325,14 @@ TEST(M1S14_EitherNestedSuspendPropagation, U12_Layer3SuspendedReturnsOk)
 
   auto result = outermost(nullptr, nullptr, &awaiterLayer3, kReturnOk);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer3.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
 }
 
-TEST(M1S14_EitherNestedSuspendPropagation, U13_Layer1And2SuspendedPropagateOk)
+TEST(M1S14EitherNestedSuspendPropagation, U13Layer1And2SuspendedPropagateOk)
 {
   RecordProperty("id", "M1-S14-U13");
   RecordProperty("ver", "0.05");
@@ -361,18 +346,17 @@ TEST(M1S14_EitherNestedSuspendPropagation, U13_Layer1And2SuspendedPropagateOk)
 
   auto result = outermost(&awaiterLayer1, &awaiterLayer2, nullptr, kReturnOk);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer1.resume();
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer2.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
 }
 
-TEST(M1S14_EitherNestedSuspendPropagation, U14_Layer1And3SuspendedPropagateOk)
+TEST(M1S14EitherNestedSuspendPropagation, U14Layer1And3SuspendedPropagateOk)
 {
   RecordProperty("id", "M1-S14-U14");
   RecordProperty("ver", "0.05");
@@ -386,18 +370,17 @@ TEST(M1S14_EitherNestedSuspendPropagation, U14_Layer1And3SuspendedPropagateOk)
 
   auto result = outermost(&awaiterLayer1, nullptr, &awaiterLayer3, kReturnOk);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer1.resume();
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer3.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
 }
 
-TEST(M1S14_EitherNestedSuspendPropagation, U15_Layer2And3SuspendedPropagateOk)
+TEST(M1S14EitherNestedSuspendPropagation, U15Layer2And3SuspendedPropagateOk)
 {
   RecordProperty("id", "M1-S14-U15");
   RecordProperty("ver", "0.05");
@@ -411,18 +394,17 @@ TEST(M1S14_EitherNestedSuspendPropagation, U15_Layer2And3SuspendedPropagateOk)
 
   auto result = outermost(nullptr, &awaiterLayer2, &awaiterLayer3, kReturnOk);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer2.resume();
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer3.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
 }
 
-TEST(M1S14_EitherNestedSuspendPropagation, U16_AllLayersSuspendedPropagateOk)
+TEST(M1S14EitherNestedSuspendPropagation, U16AllLayersSuspendedPropagateOk)
 {
   RecordProperty("id", "M1-S14-U16");
   RecordProperty("ver", "0.05");
@@ -438,18 +420,17 @@ TEST(M1S14_EitherNestedSuspendPropagation, U16_AllLayersSuspendedPropagateOk)
   auto result =
       outermost(&awaiterLayer1, &awaiterLayer2, &awaiterLayer3, kReturnOk);
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer1.resume();
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer2.resume();
 
-  EXPECT_FALSE(result.done());
+  EXPECT_EQ(result.state(), ropic::CoroState::UNDEFINED);
   awaiterLayer3.resume();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
 }
 
 // NOLINTEND(readability-magic-numbers,readability-identifier-naming,readability-convert-member-functions-to-static)

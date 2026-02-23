@@ -36,7 +36,7 @@ struct FixedString
   /// null termination. This is the sole constructor, which eliminates
   /// the overload ambiguity that would arise from having both a
   /// `const char*` and a `const char (&)[N]` constructor.
-  constexpr FixedString(const char (&s)[N])
+  constexpr FixedString(char const (&s)[N])
   {
     for (size_t i = 0; i != N; ++i)
       buffer[i] = s[i];
@@ -45,7 +45,7 @@ struct FixedString
   }
 };
 
-// Deduction guide: Giúp trình biên dịch tự đoán N từ chuỗi nhập vào
+/// @brief Deduction guide: lets the compiler deduce N from a string literal.
 template <size_t N>
 FixedString(char const (&)[N]) -> FixedString<N>;
 

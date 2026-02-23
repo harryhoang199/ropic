@@ -13,7 +13,7 @@
 // Test Suite: Async Function Tests with done() Behavior
 // =============================================================================
 
-TEST(M1S10_EitherNestedAsyncBehavior, U01_SuspendedWithoutError)
+TEST(M1S10EitherNestedAsyncBehavior, U01SuspendedWithoutError)
 {
   RecordProperty("id", "M1-S10-U01");
   RecordProperty("ver", "0.04");
@@ -42,18 +42,21 @@ TEST(M1S10_EitherNestedAsyncBehavior, U01_SuspendedWithoutError)
 
   auto either = outermost();
 
-  EXPECT_FALSE(either.done()) << "done() should return false while suspended";
+  EXPECT_EQ(either.state(), ropic::CoroState::UNDEFINED)
+      << "state() should return UNDEFINED while suspended";
   awaiter1.resume();
 
-  EXPECT_FALSE(either.done()) << "done() should return false while suspended";
+  EXPECT_EQ(either.state(), ropic::CoroState::UNDEFINED)
+      << "state() should return UNDEFINED while suspended";
   awaiter2.resume();
 
-  EXPECT_TRUE(either.done()) << "done() should return true after resume";
+  EXPECT_EQ(either.state(), ropic::CoroState::DONE)
+      << "done() should return true after resume";
   EXPECT_EQ(*either.value(), 42)
       << "value() should return valid Borrower after resume";
 }
 
-TEST(M1S10_EitherNestedAsyncBehavior, U02_SuspendedWithError)
+TEST(M1S10EitherNestedAsyncBehavior, U02SuspendedWithError)
 {
   RecordProperty("id", "M1-S10-U02");
   RecordProperty("ver", "0.04");
@@ -82,18 +85,21 @@ TEST(M1S10_EitherNestedAsyncBehavior, U02_SuspendedWithError)
 
   auto either = outermost();
 
-  EXPECT_FALSE(either.done()) << "done() should return false while suspended";
+  EXPECT_EQ(either.state(), ropic::CoroState::UNDEFINED)
+      << "state() should return UNDEFINED while suspended";
   awaiter1.resume();
 
-  EXPECT_FALSE(either.done()) << "done() should return false while suspended";
+  EXPECT_EQ(either.state(), ropic::CoroState::UNDEFINED)
+      << "state() should return UNDEFINED while suspended";
   awaiter2.resume();
 
-  EXPECT_TRUE(either.done()) << "done() should return true after resume";
+  EXPECT_EQ(either.state(), ropic::CoroState::DONE)
+      << "done() should return true after resume";
   EXPECT_EQ(*either.error(), std::string("ERROR 404"))
       << "error() should return valid Borrower after resume";
 }
 
-TEST(M1S10_EitherNestedAsyncBehavior, U03_AsyncDelayDonePolling)
+TEST(M1S10EitherNestedAsyncBehavior, U03AsyncDelayDonePolling)
 {
   RecordProperty("id", "M1-S10-U03");
   RecordProperty("ver", "0.04");
@@ -122,8 +128,8 @@ TEST(M1S10_EitherNestedAsyncBehavior, U03_AsyncDelayDonePolling)
   {
     std::lock_guard lock(*mutex);
     eitherPtr = new Either<int, std::string>(outermost());
-    EXPECT_FALSE(eitherPtr->done())
-        << "done() should return false immediately after creation";
+    EXPECT_EQ(eitherPtr->state(), ropic::CoroState::UNDEFINED)
+        << "state() should return UNDEFINED immediately after creation";
   }
 
 #ifdef NDEBUG
@@ -131,7 +137,7 @@ TEST(M1S10_EitherNestedAsyncBehavior, U03_AsyncDelayDonePolling)
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       },
       std::chrono::seconds(2)))
       << "Timeout waiting for async completion";
@@ -140,17 +146,17 @@ TEST(M1S10_EitherNestedAsyncBehavior, U03_AsyncDelayDonePolling)
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       }));
 #endif
 
-  EXPECT_TRUE(eitherPtr->done());
+  EXPECT_EQ(eitherPtr->state(), ropic::CoroState::DONE);
   EXPECT_TRUE(eitherPtr->value());
   EXPECT_EQ(*eitherPtr->value(), 123);
   delete eitherPtr;
 }
 
-TEST(M1S10_EitherNestedAsyncBehavior, U04_AsyncDelayWithError)
+TEST(M1S10EitherNestedAsyncBehavior, U04AsyncDelayWithError)
 {
   RecordProperty("id", "M1-S10-U04");
   RecordProperty("ver", "0.04");
@@ -179,8 +185,8 @@ TEST(M1S10_EitherNestedAsyncBehavior, U04_AsyncDelayWithError)
   {
     std::lock_guard lock(*mutex);
     eitherPtr = new Either<int, std::string>(outermost());
-    EXPECT_FALSE(eitherPtr->done())
-        << "done() should return false immediately after creation";
+    EXPECT_EQ(eitherPtr->state(), ropic::CoroState::UNDEFINED)
+        << "state() should return UNDEFINED immediately after creation";
   }
 
 #ifdef NDEBUG
@@ -188,7 +194,7 @@ TEST(M1S10_EitherNestedAsyncBehavior, U04_AsyncDelayWithError)
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       },
       std::chrono::seconds(2)))
       << "Timeout waiting for async completion";
@@ -197,17 +203,17 @@ TEST(M1S10_EitherNestedAsyncBehavior, U04_AsyncDelayWithError)
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       }));
 #endif
 
-  EXPECT_TRUE(eitherPtr->done());
+  EXPECT_EQ(eitherPtr->state(), ropic::CoroState::DONE);
   EXPECT_TRUE(eitherPtr->error());
   EXPECT_EQ(*eitherPtr->error(), "async error");
   delete eitherPtr;
 }
 
-TEST(M1S10_EitherNestedAsyncBehavior, U05_AsyncWithValueAwaiter)
+TEST(M1S10EitherNestedAsyncBehavior, U05AsyncWithValueAwaiter)
 {
   RecordProperty("id", "M1-S10-U05");
   RecordProperty("ver", "0.04");
@@ -238,8 +244,8 @@ TEST(M1S10_EitherNestedAsyncBehavior, U05_AsyncWithValueAwaiter)
   {
     std::lock_guard lock(*mutex);
     eitherPtr = new Either<int, std::string>(outermost());
-    EXPECT_FALSE(eitherPtr->done())
-        << "done() should return false immediately after creation";
+    EXPECT_EQ(eitherPtr->state(), ropic::CoroState::UNDEFINED)
+        << "state() should return UNDEFINED immediately after creation";
   }
 
 #ifdef NDEBUG
@@ -247,7 +253,7 @@ TEST(M1S10_EitherNestedAsyncBehavior, U05_AsyncWithValueAwaiter)
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       },
       std::chrono::seconds(2)))
       << "Timeout waiting for async completion";
@@ -256,17 +262,17 @@ TEST(M1S10_EitherNestedAsyncBehavior, U05_AsyncWithValueAwaiter)
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       }));
 #endif
 
-  EXPECT_TRUE(eitherPtr->done());
+  EXPECT_EQ(eitherPtr->state(), ropic::CoroState::DONE);
   EXPECT_TRUE(eitherPtr->value());
   EXPECT_EQ(*eitherPtr->value(), 200);
   delete eitherPtr;
 }
 
-TEST(M1S10_EitherNestedAsyncBehavior, U06_AsyncChainedOperations)
+TEST(M1S10EitherNestedAsyncBehavior, U06AsyncChainedOperations)
 {
   RecordProperty("id", "M1-S10-U06");
   RecordProperty("ver", "0.04");
@@ -298,8 +304,8 @@ TEST(M1S10_EitherNestedAsyncBehavior, U06_AsyncChainedOperations)
   {
     std::lock_guard lock(*mutex);
     eitherPtr = new Either<int, std::string>(outermost());
-    EXPECT_FALSE(eitherPtr->done())
-        << "done() should return false immediately after creation";
+    EXPECT_EQ(eitherPtr->state(), ropic::CoroState::UNDEFINED)
+        << "state() should return UNDEFINED immediately after creation";
   }
 
 #ifdef NDEBUG
@@ -307,7 +313,7 @@ TEST(M1S10_EitherNestedAsyncBehavior, U06_AsyncChainedOperations)
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       },
       std::chrono::seconds(2)))
       << "Timeout waiting for async completion";
@@ -316,17 +322,17 @@ TEST(M1S10_EitherNestedAsyncBehavior, U06_AsyncChainedOperations)
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       }));
 #endif
 
-  EXPECT_TRUE(eitherPtr->done());
+  EXPECT_EQ(eitherPtr->state(), ropic::CoroState::DONE);
   EXPECT_TRUE(eitherPtr->value());
   EXPECT_EQ(*eitherPtr->value(), 30);
   delete eitherPtr;
 }
 
-TEST(M1S10_EitherNestedAsyncBehavior, U07_AsyncMixedWithEitherPropagation)
+TEST(M1S10EitherNestedAsyncBehavior, U07AsyncMixedWithEitherPropagation)
 {
   RecordProperty("id", "M1-S10-U07");
   RecordProperty("ver", "0.04");
@@ -359,8 +365,8 @@ TEST(M1S10_EitherNestedAsyncBehavior, U07_AsyncMixedWithEitherPropagation)
   {
     std::lock_guard lock(*mutex);
     eitherPtr = new Either<int, std::string>(outermost());
-    EXPECT_FALSE(eitherPtr->done())
-        << "done() should return false immediately after creation";
+    EXPECT_EQ(eitherPtr->state(), ropic::CoroState::UNDEFINED)
+        << "state() should return UNDEFINED immediately after creation";
   }
 
 #ifdef NDEBUG
@@ -368,7 +374,7 @@ TEST(M1S10_EitherNestedAsyncBehavior, U07_AsyncMixedWithEitherPropagation)
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       },
       std::chrono::seconds(2)))
       << "Timeout waiting for async completion";
@@ -377,17 +383,17 @@ TEST(M1S10_EitherNestedAsyncBehavior, U07_AsyncMixedWithEitherPropagation)
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       }));
 #endif
 
-  EXPECT_TRUE(eitherPtr->done());
+  EXPECT_EQ(eitherPtr->state(), ropic::CoroState::DONE);
   EXPECT_TRUE(eitherPtr->value());
   EXPECT_EQ(*eitherPtr->value(), 55);
   delete eitherPtr;
 }
 
-TEST(M1S10_EitherNestedAsyncBehavior, U08_AsyncErrorPropagationAfterDelay)
+TEST(M1S10EitherNestedAsyncBehavior, U08AsyncErrorPropagationAfterDelay)
 {
   RecordProperty("id", "M1-S10-U08");
   RecordProperty("ver", "0.04");
@@ -419,8 +425,8 @@ TEST(M1S10_EitherNestedAsyncBehavior, U08_AsyncErrorPropagationAfterDelay)
   {
     std::lock_guard lock(*mutex);
     eitherPtr = new Either<int, std::string>(outermost());
-    EXPECT_FALSE(eitherPtr->done())
-        << "done() should return false immediately after creation";
+    EXPECT_EQ(eitherPtr->state(), ropic::CoroState::UNDEFINED)
+        << "state() should return UNDEFINED immediately after creation";
   }
 
 #ifdef NDEBUG
@@ -428,7 +434,7 @@ TEST(M1S10_EitherNestedAsyncBehavior, U08_AsyncErrorPropagationAfterDelay)
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       },
       std::chrono::seconds(2)))
       << "Timeout waiting for async completion";
@@ -437,11 +443,11 @@ TEST(M1S10_EitherNestedAsyncBehavior, U08_AsyncErrorPropagationAfterDelay)
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       }));
 #endif
 
-  EXPECT_TRUE(eitherPtr->done());
+  EXPECT_EQ(eitherPtr->state(), ropic::CoroState::DONE);
   EXPECT_TRUE(eitherPtr->error());
   EXPECT_EQ(*eitherPtr->error(), "propagated after async");
   delete eitherPtr;

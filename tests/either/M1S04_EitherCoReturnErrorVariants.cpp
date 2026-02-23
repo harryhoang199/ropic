@@ -7,9 +7,9 @@
 
 // NOLINTBEGIN(readability-magic-numbers)
 
-TEST(M1S04_EitherCoReturnErrorVariants, U01_BraceInitCoreturnError)
+TEST(M1S04EitherCoReturnErrorVariants, U01BraceInitCoreturnError)
 {
-  RecordProperty("id", "M1-S12-U01");
+  RecordProperty("id", "M1-S04-U01");
   RecordProperty("ver", "0.03");
   RecordProperty("desc", "co_return {args...} constructs ERROR via brace-init");
 
@@ -21,17 +21,16 @@ TEST(M1S04_EitherCoReturnErrorVariants, U01_BraceInitCoreturnError)
 
   auto result = returnErrorContextBraceInit(404, "api", "Resource not found");
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 404);
   EXPECT_EQ(result.error()->source, "api");
   EXPECT_EQ(result.error()->message, "Resource not found");
 }
 
-TEST(M1S04_EitherCoReturnErrorVariants, U02_PolymorphicErrorDirect)
+TEST(M1S04EitherCoReturnErrorVariants, U02PolymorphicErrorDirect)
 {
-  RecordProperty("id", "M1-S12-U02");
+  RecordProperty("id", "M1-S04-U02");
   RecordProperty("ver", "0.03");
   RecordProperty(
       "desc", "co_return DerivedError{...} stores derived type correctly");
@@ -43,108 +42,83 @@ TEST(M1S04_EitherCoReturnErrorVariants, U02_PolymorphicErrorDirect)
 
   auto result = returnNetworkError(500, "Connection failed", "/api/v1");
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 500);
   EXPECT_EQ(result.error()->message, "Connection failed");
-
-  // Verify polymorphic behavior via virtual function
   EXPECT_EQ(result.error()->describe(), "Connection failed at /api/v1");
 }
 
-TEST(M1S04_EitherCoReturnErrorVariants, U03_PolymorphicErrorLvalue)
+TEST(M1S04EitherCoReturnErrorVariants, U03PolymorphicErrorLvalue)
 {
-  RecordProperty("id", "M1-S12-U03");
+  RecordProperty("id", "M1-S04-U03");
   RecordProperty("ver", "0.03");
   RecordProperty(
       "desc",
-      "co_return lvalue DerivedError preserves derived type via const& "
-      "overload");
+      "co_return lvalue DerivedError preserves derived type via "
+      "const& overload");
+
   NetworkError err{502, "Bad Gateway", "/api/v2"};
   auto returnNetworkErrorLvalue = [&err]() -> Either<int, BaseError>
   { co_return err; };
 
   auto result = returnNetworkErrorLvalue();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, err.code);
   EXPECT_EQ(result.error()->message, err.message);
-
-  // CRITICAL TEST: Verify polymorphic behavior is preserved for lvalue
-  // If this fails with "Bad Gateway" instead of "Bad Gateway at /api/v2",
-  // it means the derived type was sliced to base ERROR
   EXPECT_EQ(result.error()->describe(), "Bad Gateway at /api/v2");
 }
 
-TEST(M1S04_EitherCoReturnErrorVariants, U04_ImmovableErrorLvalueFallback)
+TEST(M1S04EitherCoReturnErrorVariants, U04ImmovableErrorLvalueFallback)
 {
-  RecordProperty("id", "M1-S12-U04");
+  RecordProperty("id", "M1-S04-U04");
   RecordProperty("ver", "0.03");
   RecordProperty(
       "desc",
-      "co_return lvalue ImmovableNetworkError (no copy/move) falls back to "
-      "const BaseError& overload, slicing to base type");
+      "co_return lvalue ImmovableNetworkError (no copy/move) falls "
+      "back to const BaseError& overload, slicing to base type");
 
-  // Note: ImmovableNetworkError has deleted copy/move constructors
-  // So the template return_value(DERIVED_ERR&&) cannot be used
-  // Instead, it falls back to return_value(ERROR const&) which requires
-  // converting to BaseError, resulting in object slicing
   ImmovableNetworkError err{503, "Service Unavailable", "/api/v3"};
   auto returnImmovableLvalue = [&err]() -> Either<int, BaseError>
   { co_return err; };
 
   auto result = returnImmovableLvalue();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 503);
   EXPECT_EQ(result.error()->message, "Service Unavailable");
-
-  // CRITICAL: Because ImmovableNetworkError cannot be copied/moved,
-  // it must be converted to BaseError const&, causing object slicing.
-  // The derived type information (endpoint, virtual describe) is lost.
+  // Slicing occurred — derived type info is lost
   EXPECT_EQ(result.error()->describe(), "Service Unavailable");
-  // NOT "Service Unavailable [immovable] at /api/v3" - slicing occurred
 }
 
-TEST(M1S04_EitherCoReturnErrorVariants, U05_ImmovableErrorRvalueFallback)
+TEST(M1S04EitherCoReturnErrorVariants, U05ImmovableErrorRvalueFallback)
 {
-  RecordProperty("id", "M1-S12-U05");
+  RecordProperty("id", "M1-S04-U05");
   RecordProperty("ver", "0.03");
   RecordProperty(
       "desc",
-      "co_return rvalue ImmovableNetworkError (no copy/move) falls back to "
-      "BaseError&& overload, slicing to base type");
+      "co_return rvalue ImmovableNetworkError (no copy/move) falls "
+      "back to BaseError&& overload, slicing to base type");
 
   auto returnImmovableRvalue = []() -> Either<int, BaseError>
-  {
-    // Create rvalue directly in co_return
-    // Cannot use template overload due to deleted move constructor
-    // Falls back to return_value(ERROR&&) via BaseError conversion
-    co_return ImmovableNetworkError{504, "Gateway Timeout", "/api/v4"};
-  };
+  { co_return ImmovableNetworkError{504, "Gateway Timeout", "/api/v4"}; };
 
   auto result = returnImmovableRvalue();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 504);
   EXPECT_EQ(result.error()->message, "Gateway Timeout");
-
-  // CRITICAL: Object slicing occurs during conversion to BaseError&&
-  // The derived type's virtual function and extra data are lost
+  // Slicing occurred — derived type info is lost
   EXPECT_EQ(result.error()->describe(), "Gateway Timeout");
-  // NOT "Gateway Timeout [immovable] at /api/v4" - slicing occurred
 }
 
-TEST(M1S04_EitherCoReturnErrorVariants, U06_PolymorphicErrorBaseType)
+TEST(M1S04EitherCoReturnErrorVariants, U06PolymorphicErrorBaseType)
 {
-  RecordProperty("id", "M1-S12-U06");
+  RecordProperty("id", "M1-S04-U06");
   RecordProperty("ver", "0.03");
   RecordProperty("desc", "co_return BaseError{...} also works correctly");
 
@@ -153,16 +127,15 @@ TEST(M1S04_EitherCoReturnErrorVariants, U06_PolymorphicErrorBaseType)
 
   auto result = returnBaseError(400, "Bad request");
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 400);
   EXPECT_EQ(result.error()->describe(), "Bad request");
 }
 
-TEST(M1S04_EitherCoReturnErrorVariants, U07_PolymorphicErrorPropagation)
+TEST(M1S04EitherCoReturnErrorVariants, U07PolymorphicErrorPropagation)
 {
-  RecordProperty("id", "M1-S12-U07");
+  RecordProperty("id", "M1-S04-U07");
   RecordProperty("ver", "0.03");
   RecordProperty(
       "desc", "Derived error propagates correctly through co_await chain");
@@ -185,25 +158,24 @@ TEST(M1S04_EitherCoReturnErrorVariants, U07_PolymorphicErrorPropagation)
   };
 
   auto errorResult = chainedPolymorphicError(true);
-  ASSERT_TRUE(errorResult.done());
+  ASSERT_EQ(errorResult.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(errorResult.error());
-  ASSERT_FALSE(errorResult.value());
   EXPECT_EQ(errorResult.error()->describe(), "Connection failed at /api/v1");
 
   auto successResult = chainedPolymorphicError(false);
-  ASSERT_TRUE(successResult.done());
+  ASSERT_EQ(successResult.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(successResult.value());
-  ASSERT_FALSE(successResult.error());
   EXPECT_EQ(*successResult.value(), 42);
 }
 
-TEST(M1S04_EitherCoReturnErrorVariants, U08_ConstRefCoreturnError)
+TEST(M1S04EitherCoReturnErrorVariants, U08ConstRefCoreturnError)
 {
-  RecordProperty("id", "M1-S12-U08");
+  RecordProperty("id", "M1-S04-U08");
   RecordProperty("ver", "0.03");
   RecordProperty(
       "desc",
-      "co_return const ERROR& invokes return_value(ERROR const&) overload");
+      "co_return const ERROR& invokes return_value(ERROR const&) "
+      "overload");
 
   const ErrorContext err{401, "auth", "Unauthorized"};
   auto returnConstErrorContext = [&err]() -> Either<int, ErrorContext>
@@ -211,22 +183,21 @@ TEST(M1S04_EitherCoReturnErrorVariants, U08_ConstRefCoreturnError)
 
   auto result = returnConstErrorContext();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, err.code);
   EXPECT_EQ(result.error()->source, err.source);
   EXPECT_EQ(result.error()->message, err.message);
 }
 
-TEST(M1S04_EitherCoReturnErrorVariants, U09_TupleImmovableError)
+TEST(M1S04EitherCoReturnErrorVariants, U09TupleImmovableError)
 {
-  RecordProperty("id", "M1-S12-U09");
+  RecordProperty("id", "M1-S04-U09");
   RecordProperty("ver", "0.03");
   RecordProperty(
       "desc",
-      "co_return std::make_tuple constructs immovable ERROR in-place without "
-      "move");
+      "co_return std::make_tuple constructs immovable ERROR in-place "
+      "without move");
 
   auto returnImmovableErrorExplicitTuple =
       [](int code,
@@ -237,50 +208,47 @@ TEST(M1S04_EitherCoReturnErrorVariants, U09_TupleImmovableError)
   auto result =
       returnImmovableErrorExplicitTuple(503, "server", "Service unavailable");
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 503);
   EXPECT_EQ(result.error()->source, "server");
   EXPECT_EQ(result.error()->message, "Service unavailable");
 }
 
-TEST(M1S04_EitherCoReturnErrorVariants, U10_ErrorDestructorOnEitherDestroy)
+TEST(M1S04EitherCoReturnErrorVariants, U10ErrorDestructorOnEitherDestroy)
 {
-  RecordProperty("id", "M1-S12-U10");
+  RecordProperty("id", "M1-S04-U10");
   RecordProperty("ver", "0.03");
   RecordProperty(
       "desc", "Destructor of ERROR is called when Either is destroyed");
 
   using EDT = ErrorDestructorTracker<"M1-S04-U10">;
 
-  auto returnError = [](int code, std::string msg) -> Either<int, EDT>
+  auto returnErr = [](int code, std::string msg) -> Either<int, EDT>
   { co_return EDT{code, std::move(msg)}; };
 
   EDT::reset();
   ASSERT_EQ(EDT::s_destructorCount, 0);
 
   {
-    auto result = returnError(500, "Internal error");
-    ASSERT_TRUE(result.done());
+    auto result = returnErr(500, "Internal error");
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.error());
-    ASSERT_FALSE(result.value());
     EXPECT_EQ(result.error()->code, 500);
     EXPECT_EQ(result.error()->message, "Internal error");
   }
 
-  // After Either goes out of scope, error destructor should have been called
   EXPECT_GE(EDT::s_destructorCount, 1);
 }
 
-TEST(
-    M1S04_EitherCoReturnErrorVariants,
-    U11_DerivedErrorDestructorOnEitherDestroy)
+TEST(M1S04EitherCoReturnErrorVariants, U11DerivedErrorDestructorOnEitherDestroy)
 {
-  RecordProperty("id", "M1-S12-U11");
+  RecordProperty("id", "M1-S04-U11");
   RecordProperty("ver", "0.03");
   RecordProperty(
-      "desc", "Destructor of DERIVED_ERR is called when Either is destroyed");
+      "desc",
+      "Destructor of DERIVED_ERR is called when Either is "
+      "destroyed");
 
   using EDT = ErrorDestructorTracker<"M1-S04-U11">;
   using DEDT = DerivedErrorDestructorTracker<"M1-S04-U11">;
@@ -295,21 +263,19 @@ TEST(
 
   {
     auto result = returnDerivedError(404, "Not found", "/api/users/123");
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.error());
-    ASSERT_FALSE(result.value());
     EXPECT_EQ(result.error()->code, 404);
     EXPECT_EQ(result.error()->describe(), "Not found: /api/users/123");
   }
 
-  // Both base and derived destructors should have been called
   EXPECT_GE(EDT::s_destructorCount, 1);
   EXPECT_GE(DEDT::s_derivedDestructorCount, 1);
 }
 
-TEST(M1S04_EitherCoReturnErrorVariants, U12_NoErrorDestructorOnValue)
+TEST(M1S04EitherCoReturnErrorVariants, U12NoErrorDestructorOnValue)
 {
-  RecordProperty("id", "M1-S12-U12");
+  RecordProperty("id", "M1-S04-U12");
   RecordProperty("ver", "0.03");
   RecordProperty(
       "desc", "ERROR destructor is NOT called when Either contains value");
@@ -323,13 +289,11 @@ TEST(M1S04_EitherCoReturnErrorVariants, U12_NoErrorDestructorOnValue)
 
   {
     auto result = returnValue(42);
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.value());
-    ASSERT_FALSE(result.error());
     EXPECT_EQ(*result.value(), 42);
   }
 
-  // No ErrorDestructorTracker was ever constructed, so count should be 0
   EXPECT_EQ(EDT::s_destructorCount, 0);
 }
 

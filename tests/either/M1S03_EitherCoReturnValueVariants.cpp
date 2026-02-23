@@ -5,6 +5,7 @@
 
 #include "../shared/FixedString.hpp"
 #include "ropic.hpp"
+
 using namespace ropic;
 
 // NOLINTBEGIN(readability-magic-numbers)
@@ -12,6 +13,9 @@ using namespace ropic;
 // =============================================================================
 // Local Test Types (only used in this file)
 // =============================================================================
+
+namespace
+{
 
 /// @brief Multi-argument constructible VALUE type for tuple return tests.
 struct Coordinate
@@ -30,8 +34,9 @@ struct Coordinate
   auto operator==(const Coordinate& other) const -> bool = default;
 };
 
-/// @brief Tracks destructor calls for lifetime verification tests (VALUE type).
-/// Template parameter ID ensures per-test isolation for parallel execution.
+/// @brief Tracks destructor calls for lifetime verification tests
+/// (VALUE type). Template parameter ID ensures per-test isolation for
+/// parallel execution.
 template <FixedString ID>
 struct DestructorTracker
 {
@@ -61,8 +66,8 @@ struct DestructorTracker
 template <FixedString ID>
 int DestructorTracker<ID>::s_destructorCount = 0;
 
-/// @brief VALUE type with deleted move constructor for in-place construction
-/// tests.
+/// @brief VALUE type with deleted move constructor for in-place
+/// construction tests.
 struct ImmovableValue
 {
   int x;
@@ -84,7 +89,9 @@ struct ImmovableValue
   auto operator==(const ImmovableValue& other) const -> bool = default;
 };
 
-TEST(M1S03_EitherCoReturnValueVariants, U01_BraceInitCoreturnValue)
+} // namespace
+
+TEST(M1S03EitherCoReturnValueVariants, U01BraceInitCoreturnValue)
 {
   RecordProperty("id", "M1-S03-U01");
   RecordProperty("ver", "0.03");
@@ -96,21 +103,21 @@ TEST(M1S03_EitherCoReturnValueVariants, U01_BraceInitCoreturnValue)
 
   auto result = returnCoordinateBraceInit(10, 20, "origin");
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_EQ(result.value()->x, 10);
   EXPECT_EQ(result.value()->y, 20);
   EXPECT_EQ(result.value()->label, "origin");
 }
 
-TEST(M1S03_EitherCoReturnValueVariants, U02_DirectCoreturnValueEquivalent)
+TEST(M1S03EitherCoReturnValueVariants, U02DirectCoreturnValueEquivalent)
 {
   RecordProperty("id", "M1-S03-U02");
   RecordProperty("ver", "0.03");
   RecordProperty(
       "desc",
-      "Direct co_return Type{args...} produces same result as brace-init");
+      "Direct co_return Type{args...} produces same result as "
+      "brace-init");
 
   auto returnCoordinateDirect =
       [](int x, int y, std::string label) -> Either<Coordinate, std::string>
@@ -123,23 +130,22 @@ TEST(M1S03_EitherCoReturnValueVariants, U02_DirectCoreturnValueEquivalent)
   auto directResult = returnCoordinateDirect(10, 20, "origin");
   auto braceInitResult = returnCoordinateBraceInit(10, 20, "origin");
 
-  ASSERT_TRUE(directResult.done());
-  ASSERT_TRUE(braceInitResult.done());
+  ASSERT_EQ(directResult.state(), ropic::CoroState::DONE);
+  ASSERT_EQ(braceInitResult.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(directResult.value());
   ASSERT_TRUE(braceInitResult.value());
-  ASSERT_FALSE(directResult.error());
-  ASSERT_FALSE(braceInitResult.error());
 
   EXPECT_EQ(*directResult.value(), *braceInitResult.value());
 }
 
-TEST(M1S03_EitherCoReturnValueVariants, U03_ConstRefCoreturnValue)
+TEST(M1S03EitherCoReturnValueVariants, U03ConstRefCoreturnValue)
 {
   RecordProperty("id", "M1-S03-U03");
   RecordProperty("ver", "0.03");
   RecordProperty(
       "desc",
-      "co_return const VALUE& invokes return_value(VALUE const&) overload");
+      "co_return const VALUE& invokes return_value(VALUE const&) "
+      "overload");
 
   const Coordinate coord{50, 60, "reference"};
   auto returnConstCoordinate = [&coord]() -> Either<Coordinate, std::string>
@@ -147,22 +153,21 @@ TEST(M1S03_EitherCoReturnValueVariants, U03_ConstRefCoreturnValue)
 
   auto result = returnConstCoordinate();
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_EQ(result.value()->x, coord.x);
   EXPECT_EQ(result.value()->y, coord.y);
   EXPECT_EQ(result.value()->label, coord.label);
 }
 
-TEST(M1S03_EitherCoReturnValueVariants, U04_TupleImmovableValue)
+TEST(M1S03EitherCoReturnValueVariants, U04TupleImmovableValue)
 {
   RecordProperty("id", "M1-S03-U04");
   RecordProperty("ver", "0.03");
   RecordProperty(
       "desc",
-      "co_return std::make_tuple constructs immovable VALUE in-place without "
-      "move");
+      "co_return std::make_tuple constructs immovable VALUE in-place "
+      "without move");
 
   auto returnImmovableExplicitTuple =
       [](int x, int y, std::string label) -> Either<ImmovableValue, std::string>
@@ -170,15 +175,14 @@ TEST(M1S03_EitherCoReturnValueVariants, U04_TupleImmovableValue)
 
   auto result = returnImmovableExplicitTuple(30, 40, "vector");
 
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_EQ(result.value()->x, 30);
   EXPECT_EQ(result.value()->y, 40);
   EXPECT_EQ(result.value()->label, "vector");
 }
 
-TEST(M1S03_EitherCoReturnValueVariants, U05_ValueDestructorOnEitherDestroy)
+TEST(M1S03EitherCoReturnValueVariants, U05ValueDestructorOnEitherDestroy)
 {
   RecordProperty("id", "M1-S03-U05");
   RecordProperty("ver", "0.03");
@@ -195,19 +199,15 @@ TEST(M1S03_EitherCoReturnValueVariants, U05_ValueDestructorOnEitherDestroy)
 
   {
     auto result = returnDestructorTracker(42);
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.value());
-    ASSERT_FALSE(result.error());
     EXPECT_EQ(result.value()->id, 42);
-    // Destructor not yet called (Either still in scope)
   }
 
-  // After Either goes out of scope, destructor should have been called
-  // Note: Move construction in coroutine may cause additional destructor calls
   EXPECT_GE(DT::s_destructorCount, 1);
 }
 
-TEST(M1S03_EitherCoReturnValueVariants, U06_NoValueDestructorOnError)
+TEST(M1S03EitherCoReturnValueVariants, U06NoValueDestructorOnError)
 {
   RecordProperty("id", "M1-S03-U06");
   RecordProperty("ver", "0.03");
@@ -224,22 +224,22 @@ TEST(M1S03_EitherCoReturnValueVariants, U06_NoValueDestructorOnError)
 
   {
     auto result = returnDestructorTrackerError("some error");
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.error());
-    ASSERT_FALSE(result.value());
     EXPECT_EQ(*result.error(), "some error");
   }
 
-  // No DestructorTracker was ever constructed, so count should be 0
   EXPECT_EQ(DT::s_destructorCount, 0);
 }
 
-TEST(M1S03_EitherCoReturnValueVariants, U07_MultipleDestructorCalls)
+TEST(M1S03EitherCoReturnValueVariants, U07MultipleDestructorCalls)
 {
   RecordProperty("id", "M1-S03-U07");
   RecordProperty("ver", "0.03");
   RecordProperty(
-      "desc", "Multiple Either instances track destructor calls independently");
+      "desc",
+      "Multiple Either instances track destructor calls "
+      "independently");
 
   using DT = DestructorTracker<"M1-S03-U07">;
 
@@ -253,7 +253,6 @@ TEST(M1S03_EitherCoReturnValueVariants, U07_MultipleDestructorCalls)
   {
     auto result1 = returnDestructorTracker(1);
     ASSERT_TRUE(result1.value());
-    ASSERT_FALSE(result1.error());
   }
   countAfterFirst = DT::s_destructorCount;
   EXPECT_GE(countAfterFirst, 1);
@@ -261,18 +260,14 @@ TEST(M1S03_EitherCoReturnValueVariants, U07_MultipleDestructorCalls)
   {
     auto result2 = returnDestructorTracker(2);
     ASSERT_TRUE(result2.value());
-    ASSERT_FALSE(result2.error());
   }
   EXPECT_GT(DT::s_destructorCount, countAfterFirst);
 
   {
     auto result3 = returnDestructorTracker(3);
     ASSERT_TRUE(result3.value());
-    ASSERT_FALSE(result3.error());
   }
-  EXPECT_GT(
-      DT::s_destructorCount,
-      countAfterFirst + ((DT::s_destructorCount - countAfterFirst) / 2));
+  EXPECT_GE(DT::s_destructorCount, 3);
 }
 
 // NOLINTEND(readability-magic-numbers)

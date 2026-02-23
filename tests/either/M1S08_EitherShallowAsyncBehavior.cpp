@@ -13,7 +13,7 @@
 // Test Suite: Async Function Tests with done() Behavior
 // =============================================================================
 
-TEST(M1S08_EitherShallowAsyncBehavior, U01_SuspendedWithoutError)
+TEST(M1S08EitherShallowAsyncBehavior, U01SuspendedWithoutError)
 {
   RecordProperty("id", "M1-S08-U01");
   RecordProperty("ver", "0.02");
@@ -31,7 +31,8 @@ TEST(M1S08_EitherShallowAsyncBehavior, U01_SuspendedWithoutError)
 
   auto either = coro();
 
-  EXPECT_FALSE(either.done()) << "done() should return false while suspended";
+  EXPECT_EQ(either.state(), ropic::CoroState::UNDEFINED)
+      << "state() should return UNDEFINED while suspended";
   EXPECT_FALSE(either.value())
       << "value() should return empty Borrower while suspended";
   EXPECT_FALSE(either.error())
@@ -39,12 +40,13 @@ TEST(M1S08_EitherShallowAsyncBehavior, U01_SuspendedWithoutError)
 
   awaiter.resume();
 
-  EXPECT_TRUE(either.done()) << "done() should return true after resume";
+  EXPECT_EQ(either.state(), ropic::CoroState::DONE)
+      << "done() should return true after resume";
   EXPECT_EQ(*either.value(), 42)
       << "value() should return valid Borrower after resume";
 }
 
-TEST(M1S08_EitherShallowAsyncBehavior, U02_SuspendedWithError)
+TEST(M1S08EitherShallowAsyncBehavior, U02SuspendedWithError)
 {
   RecordProperty("id", "M1-S08-U02");
   RecordProperty("ver", "0.02");
@@ -62,7 +64,8 @@ TEST(M1S08_EitherShallowAsyncBehavior, U02_SuspendedWithError)
 
   auto either = coro();
 
-  EXPECT_FALSE(either.done()) << "done() should return false while suspended";
+  EXPECT_EQ(either.state(), ropic::CoroState::UNDEFINED)
+      << "state() should return UNDEFINED while suspended";
   EXPECT_FALSE(either.value())
       << "value() should return empty Borrower while suspended";
   EXPECT_FALSE(either.error())
@@ -70,12 +73,13 @@ TEST(M1S08_EitherShallowAsyncBehavior, U02_SuspendedWithError)
 
   awaiter.resume();
 
-  EXPECT_TRUE(either.done()) << "done() should return true after resume";
+  EXPECT_EQ(either.state(), ropic::CoroState::DONE)
+      << "done() should return true after resume";
   EXPECT_EQ(*either.error(), std::string("ERROR 404"))
       << "value() should return valid Borrower after resume";
 }
 
-TEST(M1S08_EitherShallowAsyncBehavior, U03_AsyncDelayDonePolling)
+TEST(M1S08EitherShallowAsyncBehavior, U03AsyncDelayDonePolling)
 {
   RecordProperty("id", "M1-S08-U03");
   RecordProperty("ver", "0.02");
@@ -94,26 +98,26 @@ TEST(M1S08_EitherShallowAsyncBehavior, U03_AsyncDelayDonePolling)
   {
     std::lock_guard lock(*mutex);
     eitherPtr = new Either<int, std::string>(coro());
-    EXPECT_FALSE(eitherPtr->done())
-        << "done() should return false immediately after creation";
+    EXPECT_EQ(eitherPtr->state(), ropic::CoroState::UNDEFINED)
+        << "state() should return UNDEFINED immediately after creation";
   }
 
   ASSERT_TRUE(pollUntilDone(
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       },
       std::chrono::seconds(2)))
       << "Timeout waiting for async completion";
 
-  EXPECT_TRUE(eitherPtr->done());
+  EXPECT_EQ(eitherPtr->state(), ropic::CoroState::DONE);
   EXPECT_TRUE(eitherPtr->value());
   EXPECT_EQ(*(eitherPtr->value()), 123);
   delete eitherPtr;
 }
 
-TEST(M1S08_EitherShallowAsyncBehavior, U04_AsyncDelayWithError)
+TEST(M1S08EitherShallowAsyncBehavior, U04AsyncDelayWithError)
 {
   RecordProperty("id", "M1-S08-U04");
   RecordProperty("ver", "0.02");
@@ -132,26 +136,26 @@ TEST(M1S08_EitherShallowAsyncBehavior, U04_AsyncDelayWithError)
   {
     std::lock_guard lock(*mutex);
     eitherPtr = new Either<int, std::string>(coro());
-    EXPECT_FALSE(eitherPtr->done())
-        << "done() should return false immediately after creation";
+    EXPECT_EQ(eitherPtr->state(), ropic::CoroState::UNDEFINED)
+        << "state() should return UNDEFINED immediately after creation";
   }
 
   ASSERT_TRUE(pollUntilDone(
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       },
       std::chrono::seconds(2)))
       << "Timeout waiting for async completion";
 
-  EXPECT_TRUE(eitherPtr->done());
+  EXPECT_EQ(eitherPtr->state(), ropic::CoroState::DONE);
   EXPECT_TRUE(eitherPtr->error());
   EXPECT_EQ(*eitherPtr->error(), "async error");
   delete eitherPtr;
 }
 
-TEST(M1S08_EitherShallowAsyncBehavior, U05_AsyncWithValueAwaiter)
+TEST(M1S08EitherShallowAsyncBehavior, U05AsyncWithValueAwaiter)
 {
   RecordProperty("id", "M1-S08-U05");
   RecordProperty("ver", "0.02");
@@ -172,26 +176,26 @@ TEST(M1S08_EitherShallowAsyncBehavior, U05_AsyncWithValueAwaiter)
   {
     std::lock_guard lock(*mutex);
     eitherPtr = new Either<int, std::string>(coro());
-    EXPECT_FALSE(eitherPtr->done())
-        << "done() should return false immediately after creation";
+    EXPECT_EQ(eitherPtr->state(), ropic::CoroState::UNDEFINED)
+        << "state() should return UNDEFINED immediately after creation";
   }
 
   ASSERT_TRUE(pollUntilDone(
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       },
       std::chrono::seconds(2)))
       << "Timeout waiting for async completion";
 
-  EXPECT_TRUE(eitherPtr->done());
+  EXPECT_EQ(eitherPtr->state(), ropic::CoroState::DONE);
   EXPECT_TRUE(eitherPtr->value());
   EXPECT_EQ(*eitherPtr->value(), 200);
   delete eitherPtr;
 }
 
-TEST(M1S08_EitherShallowAsyncBehavior, U06_AsyncChainedOperations)
+TEST(M1S08EitherShallowAsyncBehavior, U06AsyncChainedOperations)
 {
   RecordProperty("id", "M1-S08-U06");
   RecordProperty("ver", "0.02");
@@ -213,26 +217,26 @@ TEST(M1S08_EitherShallowAsyncBehavior, U06_AsyncChainedOperations)
   {
     std::lock_guard lock(*mutex);
     eitherPtr = new Either<int, std::string>(coro());
-    EXPECT_FALSE(eitherPtr->done())
-        << "done() should return false immediately after creation";
+    EXPECT_EQ(eitherPtr->state(), ropic::CoroState::UNDEFINED)
+        << "state() should return UNDEFINED immediately after creation";
   }
 
   ASSERT_TRUE(pollUntilDone(
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       },
       std::chrono::seconds(2)))
       << "Timeout waiting for async completion";
 
-  EXPECT_TRUE(eitherPtr->done());
+  EXPECT_EQ(eitherPtr->state(), ropic::CoroState::DONE);
   EXPECT_TRUE(eitherPtr->value());
   EXPECT_EQ(*eitherPtr->value(), 30);
   delete eitherPtr;
 }
 
-TEST(M1S08_EitherShallowAsyncBehavior, U07_AsyncMixedWithEitherPropagation)
+TEST(M1S08EitherShallowAsyncBehavior, U07AsyncMixedWithEitherPropagation)
 {
   RecordProperty("id", "M1-S08-U07");
   RecordProperty("ver", "0.02");
@@ -255,26 +259,26 @@ TEST(M1S08_EitherShallowAsyncBehavior, U07_AsyncMixedWithEitherPropagation)
   {
     std::lock_guard lock(*mutex);
     eitherPtr = new Either<int, std::string>(coro());
-    EXPECT_FALSE(eitherPtr->done())
-        << "done() should return false immediately after creation";
+    EXPECT_EQ(eitherPtr->state(), ropic::CoroState::UNDEFINED)
+        << "state() should return UNDEFINED immediately after creation";
   }
 
   ASSERT_TRUE(pollUntilDone(
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       },
       std::chrono::seconds(2)))
       << "Timeout waiting for async completion";
 
-  EXPECT_TRUE(eitherPtr->done());
+  EXPECT_EQ(eitherPtr->state(), ropic::CoroState::DONE);
   EXPECT_TRUE(eitherPtr->value());
   EXPECT_EQ(*eitherPtr->value(), 55);
   delete eitherPtr;
 }
 
-TEST(M1S08_EitherShallowAsyncBehavior, U08_AsyncErrorPropagationAfterDelay)
+TEST(M1S08EitherShallowAsyncBehavior, U08AsyncErrorPropagationAfterDelay)
 {
   RecordProperty("id", "M1-S08-U08");
   RecordProperty("ver", "0.02");
@@ -296,20 +300,20 @@ TEST(M1S08_EitherShallowAsyncBehavior, U08_AsyncErrorPropagationAfterDelay)
   {
     std::lock_guard lock(*mutex);
     eitherPtr = new Either<int, std::string>(coro());
-    EXPECT_FALSE(eitherPtr->done())
-        << "done() should return false immediately after creation";
+    EXPECT_EQ(eitherPtr->state(), ropic::CoroState::UNDEFINED)
+        << "state() should return UNDEFINED immediately after creation";
   }
 
   ASSERT_TRUE(pollUntilDone(
       [eitherPtr, mutex]
       {
         std::lock_guard lock(*mutex);
-        return eitherPtr->done();
+        return eitherPtr->state() == ropic::CoroState::DONE;
       },
       std::chrono::seconds(2)))
       << "Timeout waiting for async completion";
 
-  EXPECT_TRUE(eitherPtr->done());
+  EXPECT_EQ(eitherPtr->state(), ropic::CoroState::DONE);
   EXPECT_TRUE(eitherPtr->error());
   EXPECT_EQ(*eitherPtr->error(), "propagated after async");
   delete eitherPtr;

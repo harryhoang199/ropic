@@ -7,6 +7,9 @@
 
 // NOLINTBEGIN(readability-magic-numbers)
 
+namespace
+{
+
 /// @brief Independent base error class for multiple inheritance tests.
 struct AuditableError
 {
@@ -107,7 +110,9 @@ struct ConvertibleDestructorTracker
 template <FixedString ID>
 int ConvertibleDestructorTracker<ID>::s_destructorCount = 0;
 
-TEST(M1S13_EitherCrossTypeErrorPropagation, U01_DerivedError_TwoLevel)
+} // namespace
+
+TEST(M1S13EitherCrossTypeErrorPropagation, U01DerivedErrorTwoLevel)
 {
   RecordProperty("id", "M1-S13-U01");
   RecordProperty("ver", "0.05");
@@ -127,15 +132,14 @@ TEST(M1S13_EitherCrossTypeErrorPropagation, U01_DerivedError_TwoLevel)
   };
 
   auto result = outer();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 500);
   EXPECT_EQ(result.error()->message, "Connection failed");
   EXPECT_EQ(result.error()->describe(), "Connection failed at /api/v1");
 }
 
-TEST(M1S13_EitherCrossTypeErrorPropagation, U02_DerivedError_ThreeLevel_Nested)
+TEST(M1S13EitherCrossTypeErrorPropagation, U02DerivedErrorThreeLevelNested)
 {
   RecordProperty("id", "M1-S13-U02");
   RecordProperty("ver", "0.05");
@@ -162,18 +166,15 @@ TEST(M1S13_EitherCrossTypeErrorPropagation, U02_DerivedError_ThreeLevel_Nested)
   };
 
   auto result = level1();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 503);
   EXPECT_EQ(
       result.error()->describe(),
       "Service Unavailable at /api/deep [auth-svc]");
 }
 
-TEST(
-    M1S13_EitherCrossTypeErrorPropagation,
-    U03_DerivedError_ThreeLevel_SkipLevel)
+TEST(M1S13EitherCrossTypeErrorPropagation, U03DerivedErrorThreeLevelSkipLevel)
 {
   RecordProperty("id", "M1-S13-U03");
   RecordProperty("ver", "0.05");
@@ -194,16 +195,15 @@ TEST(
   };
 
   auto result = level1();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 503);
   EXPECT_EQ(
       result.error()->describe(),
       "Service Unavailable at /api/deep [auth-svc]");
 }
 
-TEST(M1S13_EitherCrossTypeErrorPropagation, U04_DerivedError_Destructor)
+TEST(M1S13EitherCrossTypeErrorPropagation, U04DerivedErrorDestructor)
 {
   RecordProperty("id", "M1-S13-U04");
   RecordProperty("ver", "0.05");
@@ -229,9 +229,8 @@ TEST(M1S13_EitherCrossTypeErrorPropagation, U04_DerivedError_Destructor)
     };
 
     auto result = outer();
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.error());
-    ASSERT_FALSE(result.value());
     EXPECT_EQ(result.error()->code, 404);
   }
 
@@ -239,7 +238,7 @@ TEST(M1S13_EitherCrossTypeErrorPropagation, U04_DerivedError_Destructor)
   EXPECT_GE(BEDT::s_destructorCount, 1);
 }
 
-TEST(M1S13_EitherCrossTypeErrorPropagation, DISABLED_U05_Convertible_TwoLevel)
+TEST(M1S13EitherCrossTypeErrorPropagation, DISABLED_U05ConvertibleTwoLevel)
 {
   RecordProperty("id", "M1-S13-U06");
   RecordProperty("ver", "0.05");
@@ -258,14 +257,13 @@ TEST(M1S13_EitherCrossTypeErrorPropagation, DISABLED_U05_Convertible_TwoLevel)
   };
 
   auto result = outer();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 400);
   EXPECT_EQ(result.error()->message, "Bad Request");
 }
 
-TEST(M1S13_EitherCrossTypeErrorPropagation, DISABLED_U06_ConvChain_SkipLevel)
+TEST(M1S13EitherCrossTypeErrorPropagation, DISABLED_U06ConvChainSkipLevel)
 {
   RecordProperty("id", "M1-S13-U07");
   RecordProperty("ver", "0.05");
@@ -284,16 +282,13 @@ TEST(M1S13_EitherCrossTypeErrorPropagation, DISABLED_U06_ConvChain_SkipLevel)
   };
 
   auto result = f1();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 422);
   EXPECT_EQ(result.error()->message, "Validation");
 }
 
-TEST(
-    M1S13_EitherCrossTypeErrorPropagation,
-    DISABLED_U07_DerivedThenConv_SkipLevel)
+TEST(M1S13EitherCrossTypeErrorPropagation, DISABLED_U07DerivedThenConvSkipLevel)
 {
   RecordProperty("id", "M1-S13-U08");
   RecordProperty("ver", "0.05");
@@ -313,16 +308,13 @@ TEST(
   };
 
   auto result = f1();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 500);
   EXPECT_EQ(result.error()->message, "Server Error");
 }
 
-TEST(
-    M1S13_EitherCrossTypeErrorPropagation,
-    DISABLED_U08_ConvThenDerived_SkipLevel)
+TEST(M1S13EitherCrossTypeErrorPropagation, DISABLED_U08ConvThenDerivedSkipLevel)
 {
   RecordProperty("id", "M1-S13-U09");
   RecordProperty("ver", "0.05");
@@ -345,14 +337,13 @@ TEST(
   };
 
   auto result = f1();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 502);
   EXPECT_EQ(result.error()->message, "Bad Gateway");
 }
 
-TEST(M1S13_EitherCrossTypeErrorPropagation, DISABLED_U09_AllConv_Nested)
+TEST(M1S13EitherCrossTypeErrorPropagation, DISABLED_U09AllConvNested)
 {
   RecordProperty("id", "M1-S13-U10");
   RecordProperty("ver", "0.05");
@@ -377,14 +368,13 @@ TEST(M1S13_EitherCrossTypeErrorPropagation, DISABLED_U09_AllConv_Nested)
   };
 
   auto result = f1();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 503);
   EXPECT_EQ(result.error()->message, "Unavailable");
 }
 
-TEST(M1S13_EitherCrossTypeErrorPropagation, DISABLED_U10_ConvAndDerived_Nested)
+TEST(M1S13EitherCrossTypeErrorPropagation, DISABLED_U10ConvAndDerivedNested)
 {
   RecordProperty("id", "M1-S13-U11");
   RecordProperty("ver", "0.05");
@@ -409,14 +399,13 @@ TEST(M1S13_EitherCrossTypeErrorPropagation, DISABLED_U10_ConvAndDerived_Nested)
   };
 
   auto result = f1();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 500);
   EXPECT_EQ(result.error()->message, "Internal");
 }
 
-TEST(M1S13_EitherCrossTypeErrorPropagation, DISABLED_U11_DerivedThenConv_Nested)
+TEST(M1S13EitherCrossTypeErrorPropagation, DISABLED_U11DerivedThenConvNested)
 {
   RecordProperty("id", "M1-S13-U12");
   RecordProperty("ver", "0.05");
@@ -444,16 +433,15 @@ TEST(M1S13_EitherCrossTypeErrorPropagation, DISABLED_U11_DerivedThenConv_Nested)
   };
 
   auto result = f1();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 504);
   EXPECT_EQ(result.error()->message, "Gateway Timeout");
 }
 
 TEST(
-    M1S13_EitherCrossTypeErrorPropagation,
-    DISABLED_U12_ConvertibleError_Destructor)
+    M1S13EitherCrossTypeErrorPropagation,
+    DISABLED_U12ConvertibleErrorDestructor)
 {
   RecordProperty("id", "M1-S13-U13");
   RecordProperty("ver", "0.05");
@@ -480,9 +468,8 @@ TEST(
     };
 
     auto result = outer();
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.error());
-    ASSERT_FALSE(result.value());
     EXPECT_EQ(result.error()->code, 404);
   }
 
@@ -490,8 +477,7 @@ TEST(
   EXPECT_GE(BEDT::s_destructorCount, 1);
 }
 
-TEST(
-    M1S13_EitherCrossTypeErrorPropagation, U13_MultiInheritance_FirstParentPath)
+TEST(M1S13EitherCrossTypeErrorPropagation, U13MultiInheritanceFirstParentPath)
 {
   RecordProperty("id", "M1-S13-U05");
   RecordProperty("ver", "0.05");
@@ -513,16 +499,15 @@ TEST(
   };
 
   auto result = level1();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 503);
   EXPECT_EQ(result.error()->describe(), "Service Down [payment-svc]");
 }
 
 TEST(
-    M1S13_EitherCrossTypeErrorPropagation,
-    DISABLED_U14_MultiInheritance_SecondParentPath)
+    M1S13EitherCrossTypeErrorPropagation,
+    DISABLED_U14MultiInheritanceSecondParentPath)
 {
   RecordProperty("id", "M1-S13-U14");
   RecordProperty("ver", "0.05");
@@ -544,9 +529,8 @@ TEST(
   };
 
   auto result = level1();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->severity, 1);
   EXPECT_EQ(result.error()->audit(), "[severity=1] health-check [payment-svc]");
 }

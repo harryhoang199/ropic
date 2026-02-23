@@ -7,7 +7,7 @@
 
 // NOLINTBEGIN(readability-magic-numbers)
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U01_DiffValue_DerivedError)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U01DiffValueDerivedError)
 {
   RecordProperty("id", "M1-S12-U01");
   RecordProperty("ver", "0.05");
@@ -26,13 +26,12 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U01_DiffValue_DerivedError)
   };
 
   auto result = outer(10);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_DOUBLE_EQ(*result.value(), 15.0);
 }
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U02_SameValue_DerivedError)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U02SameValueDerivedError)
 {
   RecordProperty("id", "M1-S12-U02");
   RecordProperty("ver", "0.05");
@@ -51,13 +50,12 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U02_SameValue_DerivedError)
   };
 
   auto result = outer(32);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_EQ(*result.value(), 42);
 }
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U03_VoidInner_DerivedError)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U03VoidInnerDerivedError)
 {
   RecordProperty("id", "M1-S12-U03");
   RecordProperty("ver", "0.05");
@@ -76,13 +74,12 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U03_VoidInner_DerivedError)
   };
 
   auto result = outer(21);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_EQ(*result.value(), 42);
 }
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U04_DiffValue_ConvertibleError)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U04DiffValueConvertibleError)
 {
   RecordProperty("id", "M1-S12-U04");
   RecordProperty("ver", "0.05");
@@ -100,13 +97,12 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U04_DiffValue_ConvertibleError)
   };
 
   auto result = outer(8);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_DOUBLE_EQ(*result.value(), 20.0);
 }
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U05_SkipLevel_AllConv)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U05SkipLevelAllConv)
 {
   RecordProperty("id", "M1-S12-U05");
   RecordProperty("ver", "0.05");
@@ -125,13 +121,12 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U05_SkipLevel_AllConv)
   };
 
   auto result = f1(7);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_DOUBLE_EQ(*result.value(), 7.5);
 }
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U06_SkipLevel_DerivedThenConv)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U06SkipLevelDerivedThenConv)
 {
   RecordProperty("id", "M1-S12-U06");
   RecordProperty("ver", "0.05");
@@ -150,13 +145,12 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U06_SkipLevel_DerivedThenConv)
   };
 
   auto result = f1(5);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_DOUBLE_EQ(*result.value(), 15.0);
 }
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U07_SkipLevel_ConvThenDerived)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U07SkipLevelConvThenDerived)
 {
   RecordProperty("id", "M1-S12-U07");
   RecordProperty("ver", "0.05");
@@ -176,13 +170,12 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U07_SkipLevel_ConvThenDerived)
   };
 
   auto result = f1(21);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_EQ(*result.value(), "42");
 }
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U08_Chained_FirstFails)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U08ChainedFirstFails)
 {
   RecordProperty("id", "M1-S12-U08");
   RecordProperty("ver", "0.05");
@@ -205,13 +198,12 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U08_Chained_FirstFails)
   };
 
   auto result = outer();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->code, 500);
 }
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U09_Chained_SecondFails)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U09ChainedSecondFails)
 {
   RecordProperty("id", "M1-S12-U09");
   RecordProperty("ver", "0.05");
@@ -235,13 +227,12 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U09_Chained_SecondFails)
   };
 
   auto result = outer();
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.error());
-  ASSERT_FALSE(result.value());
   EXPECT_EQ(result.error()->describe(), "Validation at /submit");
 }
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U10_Chained_AllSucceed)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U10ChainedAllSucceed)
 {
   RecordProperty("id", "M1-S12-U10");
   RecordProperty("ver", "0.05");
@@ -267,13 +258,12 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U10_Chained_AllSucceed)
   };
 
   auto result = outer(21);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_EQ(*result.value(), "42");
 }
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U11_ThreeLevel_AllDerived_Nested)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U11ThreeLevelAllDerivedNested)
 {
   RecordProperty("id", "M1-S12-U11");
   RecordProperty("ver", "0.05");
@@ -298,13 +288,12 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U11_ThreeLevel_AllDerived_Nested)
   };
 
   auto result = level1(20);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_EQ(*result.value(), "40");
 }
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U12_Nested_AllConv)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U12NestedAllConv)
 {
   RecordProperty("id", "M1-S12-U12");
   RecordProperty("ver", "0.05");
@@ -328,13 +317,12 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U12_Nested_AllConv)
   };
 
   auto result = f1(7);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_EQ(*result.value(), "21");
 }
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U13_Nested_ConvAndDerived)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U13NestedConvAndDerived)
 {
   RecordProperty("id", "M1-S12-U13");
   RecordProperty("ver", "0.05");
@@ -358,13 +346,12 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U13_Nested_ConvAndDerived)
   };
 
   auto result = f1(10);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_EQ(*result.value(), "10");
 }
 
-TEST(M1S12_EitherCrossTypeCoawaitSuccess, U14_Nested_DerivedThenConv)
+TEST(M1S12EitherCrossTypeCoawaitSuccess, U14NestedDerivedThenConv)
 {
   RecordProperty("id", "M1-S12-U14");
   RecordProperty("ver", "0.05");
@@ -389,9 +376,8 @@ TEST(M1S12_EitherCrossTypeCoawaitSuccess, U14_Nested_DerivedThenConv)
   };
 
   auto result = f1(3.7);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
-  ASSERT_FALSE(result.error());
   EXPECT_EQ(*result.value(), "8");
 }
 

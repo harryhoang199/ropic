@@ -6,34 +6,36 @@
 #include "TestHelpers.hpp"
 
 // NOLINTBEGIN(readability-magic-numbers)
-TEST(M1S05_EitherSyncCoroutine, U01_BasicCoreturn)
+
+TEST(M1S05EitherSyncCoroutine, U01BasicCoreturn)
 {
   RecordProperty("id", "M1-S05-U01");
   RecordProperty("ver", "0.01");
   RecordProperty("desc", "Coroutine co_return works for data, error, and Void");
 
   auto dataResult = returnData(42);
-  ASSERT_TRUE(dataResult.done());
+  ASSERT_EQ(dataResult.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(dataResult.value());
   EXPECT_EQ(*dataResult.value(), 42);
 
   auto errorResult = returnError("coroutine error");
-  ASSERT_TRUE(errorResult.done());
+  ASSERT_EQ(errorResult.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(errorResult.error());
   EXPECT_EQ(*errorResult.error(), "coroutine error");
 
   auto voidResult = returnOK();
-  ASSERT_TRUE(voidResult.done());
+  ASSERT_EQ(voidResult.state(), ropic::CoroState::DONE);
   EXPECT_FALSE(voidResult.error());
 }
 
-TEST(M1S05_EitherSyncCoroutine, U02_ResultAccessible)
+TEST(M1S05EitherSyncCoroutine, U02ResultAccessible)
 {
   RecordProperty("id", "M1-S05-U02");
   RecordProperty("ver", "0.01");
   RecordProperty(
       "desc",
-      "Result accessible after coroutine completes (final_suspend works)");
+      "Result accessible after coroutine completes "
+      "(final_suspend works)");
 
   auto chainedAwaitsAllSucceed = [](int start) -> Either<int, std::string>
   {
@@ -44,12 +46,12 @@ TEST(M1S05_EitherSyncCoroutine, U02_ResultAccessible)
   };
 
   auto result = chainedAwaitsAllSucceed(0);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
   EXPECT_EQ(*result.value(), 110);
 }
 
-TEST(M1S05_EitherSyncCoroutine, U03_DestructorCleanup)
+TEST(M1S05EitherSyncCoroutine, U03DestructorCleanup)
 {
   RecordProperty("id", "M1-S05-U03");
   RecordProperty("ver", "0.01");
@@ -63,7 +65,7 @@ TEST(M1S05_EitherSyncCoroutine, U03_DestructorCleanup)
   SUCCEED();
 }
 
-TEST(M1S05_EitherSyncCoroutine, U04_MoveOperations)
+TEST(M1S05EitherSyncCoroutine, U04MoveOperations)
 {
   RecordProperty("id", "M1-S05-U04");
   RecordProperty("ver", "0.01");
@@ -72,12 +74,12 @@ TEST(M1S05_EitherSyncCoroutine, U04_MoveOperations)
 
   auto src = returnData(42);
   auto dst = std::move(src);
-  ASSERT_TRUE(dst.done());
+  ASSERT_EQ(dst.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(dst.value());
   EXPECT_EQ(*dst.value(), 42);
 }
 
-TEST(M1S05_EitherSyncCoroutine, U05_ZeroCopiesOnReturn)
+TEST(M1S05EitherSyncCoroutine, U05ZeroCopiesOnReturn)
 {
   RecordProperty("id", "M1-S05-U05");
   RecordProperty("ver", "0.01");
@@ -87,13 +89,13 @@ TEST(M1S05_EitherSyncCoroutine, U05_ZeroCopiesOnReturn)
 
   MT::reset();
   auto result = returnMoveTracker<"M1-S05-U05">(42);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
   EXPECT_EQ(result.value()->value, 42);
   EXPECT_EQ(MT::s_copyCount, 0);
 }
 
-TEST(M1S05_EitherSyncCoroutine, U06_CoawaitBehavior)
+TEST(M1S05EitherSyncCoroutine, U06CoawaitBehavior)
 {
   RecordProperty("id", "M1-S05-U06");
   RecordProperty("ver", "0.01");
@@ -102,35 +104,35 @@ TEST(M1S05_EitherSyncCoroutine, U06_CoawaitBehavior)
 
   {
     auto successResult = awaitAndAdd(returnData(10), 5);
-    ASSERT_TRUE(successResult.done());
+    ASSERT_EQ(successResult.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(successResult.value());
     EXPECT_EQ(*successResult.value(), 15);
   }
   auto errorResult = awaitAndAdd(returnError("input error"), 5);
-  ASSERT_TRUE(errorResult.done());
+  ASSERT_EQ(errorResult.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(errorResult.error());
   EXPECT_EQ(*errorResult.error(), "input error");
 }
 
-TEST(M1S05_EitherSyncCoroutine, U07_CoawaitRvalueAndLvalue)
+TEST(M1S05EitherSyncCoroutine, U07CoawaitRvalueAndLvalue)
 {
   RecordProperty("id", "M1-S05-U07");
   RecordProperty("ver", "0.01");
   RecordProperty("desc", "co_await works on both rvalue and lvalue Either");
 
   auto rvalueResult = awaitAndAdd(returnData(10), 5);
-  ASSERT_TRUE(rvalueResult.done());
+  ASSERT_EQ(rvalueResult.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(rvalueResult.value());
   EXPECT_EQ(*rvalueResult.value(), 15);
 
   auto input = returnData(20);
   auto lvalueResult = awaitAndAdd(std::move(input), 5);
-  ASSERT_TRUE(lvalueResult.done());
+  ASSERT_EQ(lvalueResult.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(lvalueResult.value());
   EXPECT_EQ(*lvalueResult.value(), 25);
 }
 
-TEST(M1S05_EitherSyncCoroutine, U08_ChainedCoawait)
+TEST(M1S05EitherSyncCoroutine, U08ChainedCoawait)
 {
   RecordProperty("id", "M1-S05-U08");
   RecordProperty("ver", "0.01");
@@ -160,22 +162,22 @@ TEST(M1S05_EitherSyncCoroutine, U08_ChainedCoawait)
   };
 
   auto allSucceed = chainedAwaitsAllSucceed(1);
-  ASSERT_TRUE(allSucceed.done());
+  ASSERT_EQ(allSucceed.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(allSucceed.value());
   EXPECT_EQ(*allSucceed.value(), 111);
 
   auto firstFails = chainedAwaitsFirstFails();
-  ASSERT_TRUE(firstFails.done());
+  ASSERT_EQ(firstFails.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(firstFails.error());
   EXPECT_EQ(*firstFails.error(), "first failed");
 
   auto middleFails = chainedAwaitsMiddleFails(1);
-  ASSERT_TRUE(middleFails.done());
+  ASSERT_EQ(middleFails.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(middleFails.error());
   EXPECT_EQ(*middleFails.error(), "middle failed");
 }
 
-TEST(M1S05_EitherSyncCoroutine, U09_CoawaitZeroCopies)
+TEST(M1S05EitherSyncCoroutine, U09CoawaitZeroCopies)
 {
   RecordProperty("id", "M1-S05-U09");
   RecordProperty("ver", "0.01");
@@ -191,19 +193,19 @@ TEST(M1S05_EitherSyncCoroutine, U09_CoawaitZeroCopies)
 
   MT::reset();
   auto result = awaitMoveTracker(32);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
   EXPECT_EQ(result.value()->value, 42);
   EXPECT_EQ(MT::s_copyCount, 0);
 
   MT::reset();
   auto errResult = returnIntWithMoveTrackerError<"M1-S05-U09">(true);
-  ASSERT_TRUE(errResult.done());
+  ASSERT_EQ(errResult.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(errResult.error());
   EXPECT_EQ(MT::s_copyCount, 0);
 }
 
-TEST(M1S05_EitherSyncCoroutine, U10_NestedCoroutines)
+TEST(M1S05EitherSyncCoroutine, U10NestedCoroutines)
 {
   RecordProperty("id", "M1-S05-U10");
   RecordProperty("ver", "0.01");
@@ -230,17 +232,17 @@ TEST(M1S05_EitherSyncCoroutine, U10_NestedCoroutines)
   };
 
   auto success = outerCallsInnerSuccess(10);
-  ASSERT_TRUE(success.done());
+  ASSERT_EQ(success.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(success.value());
   EXPECT_EQ(*success.value(), 25);
 
   auto error = outerCallsInnerError();
-  ASSERT_TRUE(error.done());
+  ASSERT_EQ(error.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(error.error());
   EXPECT_EQ(*error.error(), "inner error");
 }
 
-TEST(M1S05_EitherSyncCoroutine, U11_MixedTypes)
+TEST(M1S05EitherSyncCoroutine, U11MixedTypes)
 {
   RecordProperty("id", "M1-S05-U11");
   RecordProperty("ver", "0.01");
@@ -253,12 +255,12 @@ TEST(M1S05_EitherSyncCoroutine, U11_MixedTypes)
   };
 
   auto result = mixedTypeCoroutine(10);
-  ASSERT_TRUE(result.done());
+  ASSERT_EQ(result.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(result.value());
   EXPECT_DOUBLE_EQ(*result.value(), 15.0);
 }
 
-TEST(M1S05_EitherSyncCoroutine, U12_VoidValidation)
+TEST(M1S05EitherSyncCoroutine, U12VoidValidation)
 {
   RecordProperty("id", "M1-S05-U12");
   RecordProperty("ver", "0.01");
@@ -279,34 +281,34 @@ TEST(M1S05_EitherSyncCoroutine, U12_VoidValidation)
   };
 
   auto success = computeWithValidation(5);
-  ASSERT_TRUE(success.done());
+  ASSERT_EQ(success.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(success.value());
   EXPECT_EQ(*success.value(), 10);
 
   auto failure = computeWithValidation(-1);
-  ASSERT_TRUE(failure.done());
+  ASSERT_EQ(failure.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(failure.error());
   EXPECT_EQ(*failure.error(), "must be positive");
 }
 
-TEST(M1S05_EitherSyncCoroutine, U13_DeepNesting)
+TEST(M1S05EitherSyncCoroutine, U13DeepNesting)
 {
   RecordProperty("id", "M1-S05-U13");
   RecordProperty("ver", "0.01");
   RecordProperty("desc", "Deep coroutine nesting works for success and error");
 
   auto deepSuccess = level1(0);
-  ASSERT_TRUE(deepSuccess.done());
+  ASSERT_EQ(deepSuccess.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(deepSuccess.value());
   EXPECT_EQ(*deepSuccess.value(), 5);
 
   auto deepError = level1Error();
-  ASSERT_TRUE(deepError.done());
+  ASSERT_EQ(deepError.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(deepError.error());
   EXPECT_EQ(*deepError.error(), "deep error");
 }
 
-TEST(M1S05_EitherSyncCoroutine, U14_CoawaitLvalueReferenceIdentity)
+TEST(M1S05EitherSyncCoroutine, U14CoawaitLvalueReferenceIdentity)
 {
   RecordProperty("id", "M1-S05-U14");
   RecordProperty("ver", "0.05");
@@ -314,7 +316,7 @@ TEST(M1S05_EitherSyncCoroutine, U14_CoawaitLvalueReferenceIdentity)
       "desc", "co_await on lvalue Either yields reference to original data");
 
   auto lvalueEither = returnData(42);
-  ASSERT_TRUE(lvalueEither.done());
+  ASSERT_EQ(lvalueEither.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(lvalueEither.value());
 
   const int* addressFromValue = &(*lvalueEither.value());
@@ -329,8 +331,9 @@ TEST(M1S05_EitherSyncCoroutine, U14_CoawaitLvalueReferenceIdentity)
   };
 
   auto outer = testCoroutine();
-  ASSERT_TRUE(outer.done());
+  ASSERT_EQ(outer.state(), ropic::CoroState::DONE);
   ASSERT_TRUE(outer.value());
   EXPECT_EQ(addressFromCoawait, addressFromValue);
 }
+
 // NOLINTEND(readability-magic-numbers)

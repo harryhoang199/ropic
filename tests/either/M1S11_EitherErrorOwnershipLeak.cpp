@@ -11,7 +11,7 @@
 // Test Cases
 // =============================================================================
 
-TEST(M1S11_EitherErrorOwnershipLeak, U01_SingleErrorNoLeak)
+TEST(M1S11EitherErrorOwnershipLeak, U01SingleErrorNoLeak)
 {
   RecordProperty("id", "M1-S11-U01");
   RecordProperty("ver", "0.04");
@@ -28,7 +28,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U01_SingleErrorNoLeak)
 
   {
     auto result = singleError(404, "not found");
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.error());
     EXPECT_EQ(result.error()->code, 404);
     EXPECT_EQ(result.error()->message, "not found");
@@ -41,7 +41,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U01_SingleErrorNoLeak)
       << " instance(s) not destroyed";
 }
 
-TEST(M1S11_EitherErrorOwnershipLeak, U02_NestedErrorPropagationNoLeak)
+TEST(M1S11EitherErrorOwnershipLeak, U02NestedErrorPropagationNoLeak)
 {
   RecordProperty("id", "M1-S11-U02");
   RecordProperty("ver", "0.04");
@@ -71,7 +71,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U02_NestedErrorPropagationNoLeak)
 
   {
     auto result = outerReceivesError();
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.error());
     EXPECT_EQ(result.error()->code, 1);
     EXPECT_EQ(result.error()->message, "inner error");
@@ -83,7 +83,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U02_NestedErrorPropagationNoLeak)
       << " instance(s) not destroyed";
 }
 
-TEST(M1S11_EitherErrorOwnershipLeak, U03_DeepNestingErrorNoLeak)
+TEST(M1S11EitherErrorOwnershipLeak, U03DeepNestingErrorNoLeak)
 {
   RecordProperty("id", "M1-S11-U03");
   RecordProperty("ver", "0.04");
@@ -124,7 +124,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U03_DeepNestingErrorNoLeak)
 
   {
     auto result = level1();
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.error());
     EXPECT_EQ(result.error()->code, 5);
     EXPECT_EQ(result.error()->message, "level5 error");
@@ -136,7 +136,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U03_DeepNestingErrorNoLeak)
       << " instance(s) not destroyed";
 }
 
-TEST(M1S11_EitherErrorOwnershipLeak, U04_MultipleCoAwaitWithErrors)
+TEST(M1S11EitherErrorOwnershipLeak, U04MultipleCoAwaitWithErrors)
 {
   RecordProperty("id", "M1-S11-U04");
   RecordProperty("ver", "0.04");
@@ -162,7 +162,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U04_MultipleCoAwaitWithErrors)
 
   {
     auto result = multipleCoAwait();
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.error());
     EXPECT_EQ(result.error()->code, 2);
     EXPECT_EQ(result.error()->message, "second error");
@@ -174,7 +174,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U04_MultipleCoAwaitWithErrors)
       << " instance(s) not destroyed";
 }
 
-TEST(M1S11_EitherErrorOwnershipLeak, U05_InnerSuccessOuterError)
+TEST(M1S11EitherErrorOwnershipLeak, U05InnerSuccessOuterError)
 {
   RecordProperty("id", "M1-S11-U05");
   RecordProperty("ver", "0.04");
@@ -206,7 +206,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U05_InnerSuccessOuterError)
   {
     // innerFail=false, outerFail=true
     auto result = chainConditional(false, true);
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.error());
     EXPECT_EQ(result.error()->code, 100);
     EXPECT_EQ(result.error()->message, "outer error after success");
@@ -218,7 +218,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U05_InnerSuccessOuterError)
       << " instance(s) not destroyed";
 }
 
-TEST(M1S11_EitherErrorOwnershipLeak, U06_InnerErrorIgnoresOuterError)
+TEST(M1S11EitherErrorOwnershipLeak, U06InnerErrorIgnoresOuterError)
 {
   RecordProperty("id", "M1-S11-U06");
   RecordProperty("ver", "0.04");
@@ -250,7 +250,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U06_InnerErrorIgnoresOuterError)
   {
     // innerFail=true, outerFail=true (but outer error never created)
     auto result = chainConditional(true, true);
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.error());
     // Should get inner error, not outer
     EXPECT_EQ(result.error()->code, 99);
@@ -263,7 +263,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U06_InnerErrorIgnoresOuterError)
       << " instance(s) not destroyed";
 }
 
-TEST(M1S11_EitherErrorOwnershipLeak, U07_ValuePathNoErrorCreated)
+TEST(M1S11EitherErrorOwnershipLeak, U07ValuePathNoErrorCreated)
 {
   RecordProperty("id", "M1-S11-U07");
   RecordProperty("ver", "0.04");
@@ -278,7 +278,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U07_ValuePathNoErrorCreated)
 
   {
     auto result = singleValue(42);
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.value());
     ASSERT_FALSE(result.error());
     EXPECT_EQ(*result.value(), 42);
@@ -288,7 +288,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U07_ValuePathNoErrorCreated)
   EXPECT_EQ(LDE::count(), 0);
 }
 
-TEST(M1S11_EitherErrorOwnershipLeak, U08_ChainedSuccessNoLeak)
+TEST(M1S11EitherErrorOwnershipLeak, U08ChainedSuccessNoLeak)
 {
   RecordProperty("id", "M1-S11-U08");
   RecordProperty("ver", "0.04");
@@ -318,7 +318,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U08_ChainedSuccessNoLeak)
   {
     // Both inner and outer succeed
     auto result = chainConditional(false, false);
-    ASSERT_TRUE(result.done());
+    ASSERT_EQ(result.state(), ropic::CoroState::DONE);
     ASSERT_TRUE(result.value());
     ASSERT_FALSE(result.error());
     EXPECT_EQ(*result.value(), 84); // 42 * 2
@@ -331,7 +331,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U08_ChainedSuccessNoLeak)
 // Async Leak Tests
 // =============================================================================
 
-TEST(M1S11_EitherErrorOwnershipLeak, U09_AsyncErrorPropagationNoLeak)
+TEST(M1S11EitherErrorOwnershipLeak, U09AsyncErrorPropagationNoLeak)
 {
   RecordProperty("id", "M1-S11-U09");
   RecordProperty("ver", "0.04");
@@ -366,7 +366,7 @@ TEST(M1S11_EitherErrorOwnershipLeak, U09_AsyncErrorPropagationNoLeak)
         [&result, &mutex]
         {
           std::lock_guard lock{*mutex};
-          return result.done();
+          return result.state() == ropic::CoroState::DONE;
         },
         std::chrono::seconds(2)));
 

@@ -359,6 +359,10 @@ int MoveTracker<ID>::s_moveCount = 0;
 // =============================================================================
 // Helper Coroutines
 // =============================================================================
+/// @name Reusable coroutine building-blocks for tests.
+/// Simple Either-returning coroutines used across multiple test suites
+/// (accessors, sync, async, nesting, move semantics, etc.).
+/// @{
 
 inline auto returnData(int x) -> Either<int, std::string> { co_return x; }
 inline auto returnError(std::string msg) -> Either<int, std::string>
