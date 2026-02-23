@@ -14,7 +14,10 @@
  * before dereference operations. In release builds, this check is elided.
  */
 #define BORROWED_PTR_ASSERT(ptr)                                               \
-  assert((ptr) != nullptr && "Borrower: Dereferencing a null borrowed pointer")
+  assert(                                                                      \
+      ((ptr) != nullptr)                                                       \
+      && "Borrower: must not dereference null pointer "                        \
+         "(check operator bool() first)")
 
 namespace ropic
 {

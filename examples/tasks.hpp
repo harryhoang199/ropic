@@ -15,6 +15,9 @@
 
 #include "Error.hpp"
 
+#include "ropic/detail/either/resume_source.hpp"
+#include "ropic/detail/shared/safe_awaitable.hpp"
+
 namespace examples
 {
 // ==========================================
@@ -24,9 +27,16 @@ namespace examples
 // SimpleTask<T> represents a deferred computation that produces a value of type
 // T.
 
-// NOLINTBEGIN(readability-identifier-naming)
 // C++ coroutines require specific names: promise_type, await_ready, etc.
 
+// NOLINTBEGIN(readability-identifier-naming, readability-convert-member-functions-to-static)
+
+/// @brief Lazy task coroutine that produces a value of type T.
+///
+/// Demonstrates integration with Either. Suspends on initial_suspend
+/// and must be manually resumed via `run()`.
+///
+/// @tparam T  The result type of the task.
 template <typename T>
 struct SimpleTask
 {
@@ -139,9 +149,15 @@ public:
   {
   }
 
-  auto await_ready() -> bool { return false; }
+  [[nodiscard]]
+  auto await_ready() const noexcept -> bool
+  {
+    return false;
+  }
 
-  auto await_suspend(std::coroutine_handle<> h) -> std::coroutine_handle<>
+  [[nodiscard]]
+  auto await_suspend(std::coroutine_handle<> h) const noexcept
+      -> std::coroutine_handle<>
   {
     // Detach the thread to avoid deadlock: after h.resume() the
     // coroutine continues and may destroy this awaiter while still in
@@ -165,8 +181,14 @@ public:
 
     return std::noop_coroutine();
   }
-  auto await_resume() -> std::string { return std::move(_data); }
 
+  [[nodiscard]]
+  auto await_resume() noexcept -> std::string
+  {
+    return std::move(_data);
+  }
+
+  [[nodiscard]]
   auto operator()(std::string data) -> AsyncFetch&
   {
     _data = std::move(data);
@@ -174,6 +196,8 @@ public:
   }
 };
 
+/// @brief Variant of AsyncFetch that exposes the suspended coroutine handle
+/// to the caller, allowing external control of resumption timing.
 class AsyncFetchExposingHandle : public AsyncFetch
 {
   std::coroutine_handle<>* _suspendedHandle = nullptr;
@@ -189,7 +213,8 @@ public:
   {
   }
 
-  auto await_suspend(std::coroutine_handle<> h) -> std::coroutine_handle<>
+  auto await_suspend(std::coroutine_handle<> h) const noexcept
+      -> std::coroutine_handle<>
   {
     // Detach the thread to avoid deadlock: after h.resume() the coroutine
     // continues and may destroy this awaiter while still in the thread.
@@ -213,6 +238,7 @@ public:
     return std::noop_coroutine();
   }
 
+  [[nodiscard]]
   auto operator()(std::string data) -> AsyncFetchExposingHandle&
   {
     _data = std::move(data);
@@ -220,6 +246,8 @@ public:
   }
 };
 
+/// @brief Variant of AsyncFetchExposingHandle that returns a
+/// `coroutine_handle<>` from `await_suspend` for symmetric transfer.
 class AsyncFetchWithSymmetricTransfer : public AsyncFetchExposingHandle
 {
   std::coroutine_handle<> _nextHandle;
@@ -234,7 +262,9 @@ public:
   {
   }
 
-  auto await_suspend(std::coroutine_handle<> h) -> std::coroutine_handle<>
+  [[nodiscard]]
+  auto await_suspend(std::coroutine_handle<> h) const noexcept
+      -> std::coroutine_handle<>
   {
     AsyncFetchExposingHandle::await_suspend(h);
     if (_nextHandle == nullptr || _nextHandle.done())
@@ -242,12 +272,90 @@ public:
     return _nextHandle;
   }
 
+  [[nodiscard]]
   auto operator()(std::string data) -> AsyncFetchWithSymmetricTransfer&
   {
     _data = std::move(data);
     return *this;
   }
 };
-// NOLINTEND(readability-identifier-naming)
+
+/// @brief Safe awaitable that receives `ResumeSource` instead of
+/// `coroutine_handle<>`, demonstrating three resumption strategies
+/// (INLINE, ASYNC, ASYNC_DELAYED).
+///
+/// @see ropic::safe_awaitable — the concept this type satisfies.
+class SafeAsyncFetch
+{
+  std::string _data;
+
+public:
+  enum class ResumeMode : std::uint8_t
+  {
+    INLINE,
+    ASYNC,
+    ASYNC_DELAYED
+  };
+
+private:
+  ResumeMode _mode;
+
+public:
+  explicit SafeAsyncFetch(ResumeMode mode) noexcept
+      : _mode(mode)
+  {
+  }
+
+  [[nodiscard]]
+  auto await_ready() const noexcept -> bool
+  {
+    return false;
+  }
+
+  // Key difference: receives ResumeSource instead of std::coroutine_handle
+  [[nodiscard]]
+  auto await_suspend(ropic::ResumeSource resumeSrc) -> bool
+  {
+    switch (_mode)
+    {
+    case ResumeMode::INLINE:
+      resumeSrc.requestResume();
+      return true;
+
+    case ResumeMode::ASYNC:
+      std::thread([t = std::move(resumeSrc)]() mutable { t.requestResume(); })
+          .detach();
+      return true;
+
+    case ResumeMode::ASYNC_DELAYED:
+      std::thread(
+          [t = std::move(resumeSrc)]() mutable
+          {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            t.requestResume();
+          })
+          .detach();
+      return true;
+    }
+    return true;
+  }
+
+  [[nodiscard]]
+  auto await_resume() noexcept -> std::string
+  {
+    return std::move(_data);
+  }
+
+  [[nodiscard]]
+  auto operator()(std::string data) -> SafeAsyncFetch&
+  {
+    _data = std::move(data);
+    return *this;
+  }
+};
+
+static_assert(ropic::safe_awaitable<SafeAsyncFetch>);
+
+// NOLINTEND(readability-identifier-naming, readability-convert-member-functions-to-static)
 
 } // namespace examples

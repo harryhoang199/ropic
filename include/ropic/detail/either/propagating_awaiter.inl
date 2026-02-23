@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <atomic>
+#include <cassert>
 #include <coroutine>
 #include <type_traits>
 
@@ -17,9 +19,27 @@ namespace ropic::detail
  * @brief Awaiter for Either-to-Either composition with automatic error
  * propagation.
  *
- * Used when co_await-ing an EitherImpl<OTHER, ERROR> inside an
- * EitherImpl<VALUE, ERROR> coroutine. On error: propagates to caller and
- * destroys the coroutine. On success: extracts and returns the data value.
+ * Created by Promise::await_transform when co_await-ing an
+ * EitherImpl<OTHER, DERIVED_ERR> inside an EitherImpl<VALUE, ERROR>
+ * coroutine. Handles three outcomes:
+ *
+ * - **Data ready**: await_ready returns true; await_resume extracts value.
+ * - **Suspended (async pending)**: links continuation chain and either
+ *   performs symmetric transfer (READY) or propagates ResumeTarget to
+ *   the tail node (SUSPENDED).
+ * - **Error**: transfers error ownership to the tail promise and
+ *   short-circuits the caller coroutine.
+ *
+ * @tparam VALUE          Success type of the caller coroutine.
+ * @tparam ERROR          Error type of the caller coroutine.
+ * @tparam OTHER          Success type of the awaited coroutine.
+ * @tparam DERIVED_ERR    Error type of the awaited coroutine
+ *                        (must be convertible to ERROR).
+ * @tparam IS_EITHER_LREF True if the awaited EitherImpl is an lvalue
+ *                        (await_resume yields lvalue ref).
+ *
+ * @see Promise::await_transform — creates this awaiter.
+ * @see PromiseChainNode::findTail — used to locate the propagation target.
  */
 template <
     typename VALUE,
@@ -32,7 +52,8 @@ class PropagatingAwaiter
   /// @brief Promise type of the caller coroutine (EitherImpl<VALUE, ERROR>).
   using CallerPromise = typename EitherImpl<VALUE, ERROR>::promise_type;
 
-  /// @brief Promise type of the awaited coroutine (EitherImpl<OTHER, ERROR>).
+  /// @brief Promise type of the awaited coroutine
+  /// (EitherImpl<OTHER, DERIVED_ERR>).
   using AwaitablePromise =
       typename EitherImpl<OTHER, DERIVED_ERR>::promise_type;
 
@@ -49,92 +70,110 @@ public:
   }
 
   // NOLINTBEGIN(readability-identifier-naming)
-  /// @brief Returns true if data exists (no suspension needed).
+  /// @brief Returns true if the awaited coroutine already has data.
+  /// @return `true` if data is available (no suspend needed), `false`
+  ///         if suspended or errored.
   [[nodiscard]]
   auto await_ready() noexcept -> bool
   {
     return _awaitablePromise.result.has_value();
   }
 
-  /// @brief If error, propagates to caller and destroys the coroutine. If
-  /// suspended, propagates suspension state to the returned Either.
-  /// @note Always noexcept: only assigns raw pointers (ERROR*), no ERROR
-  /// operations.
-  void await_suspend(std::coroutine_handle<CallerPromise> h) noexcept
+  /// @brief Handles suspension: links the continuation chain, propagates
+  /// error or ResumeTarget, and determines the next coroutine to resume.
+  ///
+  /// @param callerHandle  Handle to the caller coroutine.
+  /// @return A coroutine handle for symmetric transfer:
+  ///         - The resume handle if the async op is READY.
+  ///         - `std::noop_coroutine()` otherwise (caller stays suspended).
+  ///
+  /// @note Always noexcept: only assigns raw pointers / moves ResumeTarget.
+  [[nodiscard]]
+  auto await_suspend(std::coroutine_handle<CallerPromise> callerHandle) noexcept
+      -> std::coroutine_handle<>
   {
-    auto& callerPromise = h.promise();
-    if (_awaitablePromise.error == nullptr)
+    assert(
+        (_awaitablePromise.continuation == nullptr)
+        && "PropagatingAwaiter::await_suspend: awaitable must not have an "
+           "existing continuation (indicates coroutine composition bug)");
+
+    auto callerNode = PromiseChainNode::toBaseHandle(callerHandle);
+
+    if (_awaitablePromise.error != nullptr)
     {
-      _awaitablePromise.continuation =
-          std::coroutine_handle<PromiseChainNode>::from_promise(
-              callerPromise);
+      auto tailNode = PromiseChainNode::findTail(callerNode);
+      // Transfer error ownership to the tail promise
+      tailNode.promise().error = _awaitablePromise.error;
+      // Reset _awaitablePromise error to avoid destruction
+      _awaitablePromise.error = nullptr;
+      return std::noop_coroutine();
+    }
+
+    // Build the continuation chain
+    _awaitablePromise.continuation = callerNode;
+
+    auto& resumeTarget = _awaitablePromise.resumeTarget;
+    if (!resumeTarget)
+      return std::noop_coroutine();
+
+    // Attempt to resume as soon as resumeTarget's state becomes READY
+
+#ifdef ROPIC_TESTING_MODE
+    while (s_awaitSuspendGate.load(std::memory_order_seq_cst) == 0)
+    {
+    }
+    s_awaitSuspendGate.fetch_add(-1, std::memory_order_seq_cst);
+#endif
+
+    assert(
+        (resumeTarget.state() != ResumePhase::RESUMED)
+        && "PropagatingAwaiter::await_suspend: ResumeTarget must not be "
+           "already consumed (state should be SUSPENDED or READY)");
+
+    auto resumeHandle = resumeTarget.tryClaimHandle();
+    if (!resumeHandle)
+    {
+      auto tailNode = PromiseChainNode::findTail(callerNode);
+      // Still SUSPENDED: transfer ResumeTarget to the tail node
+      tailNode.promise().resumeTarget = std::move(resumeTarget);
+      return std::noop_coroutine();
+    }
+
+    // READY -> RESUMED: symmetric transfer
+    return resumeHandle;
+  }
+
+  /// @brief Extracts the data value from the awaited promise.
+  ///
+  /// @return `OTHER&` if the awaited EitherImpl was an lvalue,
+  ///         `OTHER&&` (moved) if rvalue, or `void` if OTHER is Void.
+  ///
+  /// @pre The awaited promise must contain data (not error or empty).
+  [[nodiscard]]
+  auto await_resume() noexcept(noexcept(
+      !std::is_constructible_v<OTHER, OTHER&&>
+      || std::is_nothrow_move_constructible_v<OTHER>)) -> decltype(auto)
+  {
+    if constexpr (std::same_as<OTHER, Void>)
       return;
-    }
-
-    if (auto currentCont = callerPromise.continuation)
-    {
-      // If you hit this assert, there may be a bug in the coroutine
-      // composition logic or concurrent modification.
-      assert(
-          (_awaitablePromise.continuation == nullptr)
-          && "PropagatingAwaiter: Both caller and awaitable have "
-             "continuations - this is an invalid state");
-
-      // Walk to the root of the continuation chain
-      while (auto nextCont = currentCont.promise().continuation)
-      {
-        currentCont = nextCont;
-      }
-      // Transfer error ownership to root promise
-      currentCont.promise().error = _awaitablePromise.error;
-    }
     else
     {
-      callerPromise.error = _awaitablePromise.error;
+      auto& r = _awaitablePromise.result;
+      assert(
+          r.has_value()
+          && "PropagatingAwaiter::await_resume: awaited EitherImpl must "
+             "contain data (error case should not reach here)");
+
+      if constexpr (IS_EITHER_LREF)
+        return (r.value()); // NOTE: () is used as a reference operator
+      else if constexpr (std::is_constructible_v<OTHER, OTHER&&>)
+        return std::move(r.value());
     }
-
-    // reset _awaitablePromise error to avoid destruction
-    _awaitablePromise.error = nullptr;
   }
 
-  /// @brief No-op for Void data type.
-  void await_resume() noexcept
-    requires(std::same_as<OTHER, Void>)
-  {
-  }
-
-  /// @brief Extracts and moves data value (rvalue).
-  [[nodiscard]]
-  auto await_resume() noexcept(std::is_nothrow_move_constructible_v<OTHER>)
-      -> OTHER&
-    requires(!std::same_as<OTHER, Void> && IS_EITHER_LREF)
-  {
-    auto& r = _awaitablePromise.result;
-    assert(
-        r.has_value()
-        && "PropagatingAwaiter: At this point, EitherImpl must contain data");
-
-    return r.value();
-  }
-
-  // Bug: clang-format 20 misparses `-> T&&` before `requires` clause.
-  // Fixed in clang-format 21 (llvm/llvm-project#132334).
-  [[nodiscard]]
-  auto await_resume() noexcept(std::is_nothrow_move_constructible_v<OTHER>)
-      -> OTHER
-    requires(
-        !std::same_as<OTHER, Void>
-        && !IS_EITHER_LREF
-        && std::is_constructible_v<OTHER, OTHER &&>)
-  {
-    auto& r = _awaitablePromise.result;
-    assert(
-        r.has_value()
-        && "PropagatingAwaiter: At this point, EitherImpl must contain "
-           "data");
-
-    return std::move(r.value());
-  }
+#ifdef ROPIC_TESTING_MODE
+  std::atomic_int inline static s_awaitSuspendGate{-1};
+#endif
   // NOLINTEND(readability-identifier-naming)
 };
 } // namespace ropic::detail

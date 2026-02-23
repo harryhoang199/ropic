@@ -35,6 +35,7 @@ class InteropAwaiter
 
 public:
   /// @brief Constructs awaiter from rvalue EitherImpl (takes ownership).
+  /// @param awaitableEither  The EitherImpl to move into this awaiter.
   explicit InteropAwaiter(EitherImpl<VALUE, ERROR>&& awaitableEither)
       noexcept(std::is_nothrow_move_constructible_v<EitherImpl<VALUE, ERROR>>)
     requires(!IS_EITHER_LREF)
@@ -43,6 +44,7 @@ public:
   }
 
   /// @brief Constructs awaiter from lvalue EitherImpl (holds reference).
+  /// @param awaitableEither  The EitherImpl to reference.
   explicit InteropAwaiter(EitherImpl<VALUE, ERROR>& awaitableEither) noexcept
     requires(IS_EITHER_LREF)
       : _awaitableEither{awaitableEither}
@@ -52,6 +54,7 @@ public:
   // NOLINTBEGIN(readability-identifier-naming)
 
   /// @brief Always returns true (never suspends).
+  /// @return Always `true`.
   [[nodiscard]]
   auto await_ready() noexcept -> bool
   {
@@ -61,29 +64,20 @@ public:
   /// @brief Never called since await_ready() always returns true.
   void await_suspend(std::coroutine_handle<>) noexcept {}
 
-  /// @brief No-op for Void data type.
-  void await_resume() noexcept
-    requires(std::same_as<VALUE, Void>)
+  /// @brief Returns the EitherImpl to the caller.
+  /// @return `EitherImpl&` for lvalue, `EitherImpl&&` for rvalue,
+  ///         or `void` if VALUE is Void.
+  [[nodiscard]]
+  auto await_resume() noexcept -> decltype(auto)
   {
+    if constexpr (std::same_as<VALUE, Void>)
+      return;
+    else if constexpr (IS_EITHER_LREF)
+      return (_awaitableEither);
+    else
+      return std::move(_awaitableEither);
   }
 
-  /// @brief Returns reference to EitherImpl (lvalue).
-  [[nodiscard]]
-  auto await_resume() noexcept -> EitherImpl<VALUE, ERROR>&
-    requires(!std::same_as<VALUE, Void> && IS_EITHER_LREF)
-  {
-    return _awaitableEither;
-  }
-
-  /// @brief Returns EitherImpl by move (rvalue).
-  [[nodiscard]]
-  auto await_resume()
-      noexcept(std::is_nothrow_move_constructible_v<EitherImpl<VALUE, ERROR>>)
-          -> EitherImpl<VALUE, ERROR>
-    requires(!std::same_as<VALUE, Void> && !IS_EITHER_LREF)
-  {
-    return std::move(_awaitableEither);
-  }
   // NOLINTEND(readability-identifier-naming)
 };
 } // namespace ropic::detail

@@ -18,6 +18,12 @@ namespace examples
 // NOLINTBEGIN(readability-identifier-naming)
 // C++ coroutines require specific names: promise_type, yield_value, etc.
 
+/// @brief Lazy generator coroutine that yields values of type T one at a time.
+///
+/// Demonstrates streaming patterns and can yield Either values for
+/// streaming error handling.
+///
+/// @tparam T  The type of values yielded by the generator.
 template <typename T>
 struct Generator
 {

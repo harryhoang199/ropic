@@ -37,8 +37,8 @@
 
 #if defined(__clang__) && __has_cpp_attribute(clang::coro_await_elidable)
 #  define ROPIC_CORO_AWAIT_ELIDABLE [[clang::coro_await_elidable]]
-#  define ROPIC_HAS_CORO_ELISION_HINTS 1
+#  define ROPIC_HAS_CORO_ELISION_HINTS 1 ///< Compile-time flag: 1 if HALO hints are available.
 #else
 #  define ROPIC_CORO_AWAIT_ELIDABLE
-#  define ROPIC_HAS_CORO_ELISION_HINTS 0
+#  define ROPIC_HAS_CORO_ELISION_HINTS 0 ///< Compile-time flag: 0 if HALO hints are unavailable.
 #endif

@@ -12,12 +12,15 @@
 // ==========================================
 using namespace ropic;
 
+namespace
+{
+
 /**
  * @brief Trims leading and trailing whitespace from a string.
  * @param str The string to trim.
  * @return Either containing the trimmed string or an error if empty.
  */
-inline auto trim(const std::string& str) -> Result<std::string>
+auto trim(const std::string& str) -> Result<std::string>
 {
   const auto start = str.find_first_not_of(" \t\n\r\f\v");
   if (start == std::string::npos)
@@ -34,7 +37,7 @@ inline auto trim(const std::string& str) -> Result<std::string>
  * @param str The string to parse.
  * @return Either containing the parsed double or an error.
  */
-inline auto parseDouble(std::string str) -> Result<double>
+auto parseDouble(std::string str) -> Result<double>
 {
   try
   {
@@ -55,7 +58,7 @@ inline auto parseDouble(std::string str) -> Result<double>
  * @param denominator The denominator.
  * @return Either containing the result or an error.
  */
-inline auto divide(double numerator, double denominator) -> Result<double>
+auto divide(double numerator, double denominator) -> Result<double>
 {
   if (denominator == 0.0)
   {
@@ -72,7 +75,7 @@ inline auto divide(double numerator, double denominator) -> Result<double>
  * @param denominatorStr String representation of denominator.
  * @return Either containing the result or an error.
  */
-inline auto divideStr(
+auto divideStr(
     const std::string& numeratorStr, // NOLINT
     const std::string& denominatorStr) -> Result<double>
 {
@@ -100,7 +103,7 @@ inline auto divideStr(
  * @param value The value to validate.
  * @return Result<Void> - OK on success, error if validation fails.
  */
-inline auto validatePositive(double value) -> Result<Void>
+auto validatePositive(double value) -> Result<Void>
 {
   if (value <= 0)
     co_return {
@@ -114,7 +117,7 @@ inline auto validatePositive(double value) -> Result<Void>
  * @param str The string to validate.
  * @return Result<Void> - OK on success, error if empty.
  */
-inline auto validateNotEmpty(const std::string& str) -> Result<Void>
+auto validateNotEmpty(const std::string& str) -> Result<Void>
 {
   if (str.empty())
     co_return {ErrorTag::VALIDATION, "String cannot be empty"};
@@ -127,8 +130,7 @@ inline auto validateNotEmpty(const std::string& str) -> Result<Void>
  * @param data The data to save.
  * @return Result<Void> - OK on success, error on failure.
  */
-inline auto saveToStorage(const std::string& filename, double data)
-    -> Result<Void>
+auto saveToStorage(const std::string& filename, double data) -> Result<Void>
 {
   // Validate inputs first (Result<Void> in Result<Void>)
   co_await validateNotEmpty(filename);
@@ -153,7 +155,7 @@ inline auto saveToStorage(const std::string& filename, double data)
  *
  * Demonstrates: Using Result<Void> validation within Result<double>.
  */
-inline auto safeSqrt(double value) -> Result<double>
+auto safeSqrt(double value) -> Result<double>
 {
   // Use Result<Void> for validation before computing
   co_await validatePositive(value);
@@ -166,7 +168,7 @@ inline auto safeSqrt(double value) -> Result<double>
  * @param value The value to compute log of.
  * @return Result<double> - The natural log or an error.
  */
-inline auto safeLog(double value) -> Result<double>
+auto safeLog(double value) -> Result<double>
 {
   co_await validatePositive(value);
   co_return std::log(value);
@@ -179,7 +181,7 @@ inline auto safeLog(double value) -> Result<double>
  *
  * Demonstrates: Chaining Result<double> then Result<Void> validation.
  */
-inline auto parsePositiveDouble(const std::string& str) -> Result<double>
+auto parsePositiveDouble(const std::string& str) -> Result<double>
 {
   // First parse (Result<double>)
   double value = co_await parseDouble(str);
@@ -203,7 +205,7 @@ inline auto parsePositiveDouble(const std::string& str) -> Result<double>
  *
  * Demonstrates: Using Result<double> operations within Result<Void>.
  */
-inline auto processAndSave(
+auto processAndSave(
     const std::string& numeratorStr,
     const std::string& denominatorStr, // NOLINT
     const std::string& filename) -> Result<Void>
@@ -226,7 +228,7 @@ inline auto processAndSave(
  * Demonstrates: Using multiple Result<OtherType> to validate without keeping
  * results.
  */
-inline auto validateComputable(double base, double exponent) -> Result<Void>
+auto validateComputable(double base, double exponent) -> Result<Void>
 {
   // Check sqrt is valid (uses the computed value but discards it)
   (void)co_await safeSqrt(base);
@@ -252,7 +254,7 @@ inline auto validateComputable(double base, double exponent) -> Result<Void>
  *
  * Demonstrates: Complex composition of Result<Void> and Result<double>.
  */
-inline auto computeWeightedAverage(
+auto computeWeightedAverage(
     const std::vector<std::string>& values, const std::vector<double>& weights)
     -> Result<double>
 {
@@ -290,8 +292,8 @@ inline auto computeWeightedAverage(
  *
  * Demonstrates: Aggregating multiple Result<double> into Result<Void>.
  */
-inline auto
-batchProcess(const std::vector<std::pair<std::string, std::string>>& inputs)
+auto batchProcess(
+    const std::vector<std::pair<std::string, std::string>>& inputs)
     -> Result<Void>
 {
   for (const auto& [num, den] : inputs)
@@ -311,14 +313,15 @@ batchProcess(const std::vector<std::pair<std::string, std::string>>& inputs)
 // within Either-returning coroutines.
 
 template <typename AWAITER>
-inline auto fetchStrings(
+auto fetchStrings(
     std::string numeratorStr, std::string denominatorStr, AWAITER awaiter)
     -> Result<std::pair<std::string, std::string>>
 {
   // co_await non-Either awaitables - works because EitherPromise
   // has a pass-through await_transform for non-Either types.
   // Simulate fetching both operands from async sources.
-  std::string fetchedNum = co_await awaiter(std::move(numeratorStr));
+  auto temp = awaiter(std::move(numeratorStr));
+  std::string fetchedNum = co_await temp;
   std::string fetchedDen = co_await awaiter(std::move(denominatorStr));
 
   co_return {fetchedNum, fetchedDen};
@@ -336,7 +339,7 @@ inline auto fetchStrings(
  * propagation.
  */
 template <typename AWAITER>
-inline auto asyncDivideStr(
+auto asyncDivideStr(
     std::string numeratorStr, std::string denominatorStr, AWAITER awaiter)
     -> Result<double>
 {
@@ -350,7 +353,7 @@ inline auto asyncDivideStr(
 }
 
 template <typename AWAITER>
-inline auto asyncCrossRatio(
+auto asyncCrossRatio(
     std::string n1,
     std::string d1,
     std::string n2,
@@ -364,3 +367,5 @@ inline auto asyncCrossRatio(
   double crossRatio = co_await divide(r1, r2);
   co_return crossRatio;
 }
+
+} // namespace

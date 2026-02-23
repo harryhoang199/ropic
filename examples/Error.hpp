@@ -30,6 +30,7 @@ auto inline toString(ErrorTag tag) noexcept -> const char*
   }
 }
 
+/// @brief Application-level error carrying a tag, message, and optional code.
 class Error
 {
   std::string _message;
