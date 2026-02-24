@@ -7,10 +7,11 @@
 #include <coroutine>
 #include <type_traits>
 
-#include "either_promise.inl"
+#include "ropic/void.hpp"
 
 #include "ropic/detail/shared/counting_gate.hpp"
-#include "ropic/void.hpp"
+
+#include "ropic/detail/either/either_promise.inl"
 
 namespace ropic::detail
 {

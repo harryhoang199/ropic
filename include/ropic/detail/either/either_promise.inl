@@ -12,12 +12,12 @@
 #include <type_traits>
 #include <utility>
 
-#include "either_impl.hpp"
-#include "final_awaiter.hpp"
-#include "promise_chain_node.hpp"
+#include "ropic/safe_awaitable.hpp"
 
+#include "ropic/detail/either/either_impl.hpp"
+#include "ropic/detail/either/final_awaiter.hpp"
+#include "ropic/detail/either/promise_chain_node.hpp"
 #include "ropic/detail/either/safe_awaitable_adapter.hpp"
-#include "ropic/detail/shared/safe_awaitable.hpp"
 
 namespace ropic::detail
 {
@@ -282,4 +282,4 @@ public:
 };
 } // namespace ropic::detail
 
-#include "propagating_awaiter.inl"
+#include "ropic/detail/either/propagating_awaiter.inl"

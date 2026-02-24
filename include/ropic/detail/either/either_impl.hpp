@@ -256,5 +256,5 @@ struct IsEitherImpl<EitherImpl<DATA, ERROR>> : std::true_type
 
 } // namespace ropic::detail
 
-#include "either_promise.inl"
-#include "interop_awaiter.inl"
+#include "ropic/detail/either/either_promise.inl"
+#include "ropic/detail/either/interop_awaiter.inl"

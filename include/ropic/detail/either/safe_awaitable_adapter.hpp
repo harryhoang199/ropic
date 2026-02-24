@@ -7,9 +7,10 @@
 #include <coroutine>
 #include <type_traits>
 
-#include "../shared/safe_awaiter_traits.hpp"
-#include "promise_chain_node.hpp"
-#include "resume_head.hpp"
+#include "ropic/safe_awaiter_traits.hpp"
+
+#include "ropic/detail/either/promise_chain_node.hpp"
+#include "ropic/detail/either/resume_head.hpp"
 
 namespace ropic::detail
 {

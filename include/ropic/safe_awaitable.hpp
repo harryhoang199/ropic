@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "function_traits.hpp"
+#include "ropic/function_traits.hpp"
 
 namespace ropic::detail
 {

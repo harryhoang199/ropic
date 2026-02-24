@@ -6,8 +6,8 @@
 
 #include "utils/SafeAwaitableFixtures.hpp"
 
-#include "ropic/detail/either/resume_source.hpp"
-#include "ropic/detail/shared/safe_awaiter_traits.hpp"
+#include "ropic/resume_source.hpp"
+#include "ropic/safe_awaiter_traits.hpp"
 
 // NOLINTBEGIN(readability-identifier-naming,readability-convert-member-functions-to-static)
 #if defined(__clang__)

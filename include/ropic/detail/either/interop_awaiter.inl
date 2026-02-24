@@ -5,9 +5,9 @@
 
 #include <coroutine>
 
-#include "either_impl.hpp"
-
 #include "ropic/void.hpp"
+
+#include "ropic/detail/either/either_impl.hpp"
 
 namespace ropic::detail
 {

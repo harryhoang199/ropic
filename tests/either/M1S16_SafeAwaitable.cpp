@@ -7,7 +7,7 @@
 
 #include "utils/SafeAwaitableFixtures.hpp"
 
-#include "ropic/detail/shared/safe_awaitable.hpp"
+#include "ropic/safe_awaitable.hpp"
 
 // NOLINTBEGIN(readability-identifier-naming,readability-convert-member-functions-to-static)
 namespace

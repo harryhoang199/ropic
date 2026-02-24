@@ -3,7 +3,7 @@
 
 #include <concepts>
 
-#include "resume_target.hpp"
+#include "ropic/detail/either/resume_target.hpp"
 
 #pragma once
 

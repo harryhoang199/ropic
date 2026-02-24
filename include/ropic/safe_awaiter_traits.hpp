@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "function_traits.hpp"
-#include "safe_awaitable.hpp"
+#include "ropic/function_traits.hpp"
+#include "ropic/safe_awaitable.hpp"
 
 namespace ropic
 {

@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include "void.hpp"
+#include "ropic/void.hpp"
 
-#include "detail/either/either_impl.hpp"
+#include "ropic/detail/either/either_impl.hpp"
 
 namespace ropic
 {

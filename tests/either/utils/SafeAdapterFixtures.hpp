@@ -8,7 +8,7 @@
 #include <thread>
 #include <utility>
 
-#include "ropic/detail/either/resume_source.hpp"
+#include "ropic/resume_source.hpp"
 
 // NOLINTBEGIN(readability-identifier-naming,readability-convert-member-functions-to-static)
 

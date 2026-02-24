@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "unqualified_type.hpp"
+#include "ropic/detail/shared/unqualified_type.hpp"
 
 namespace ropic::detail
 {

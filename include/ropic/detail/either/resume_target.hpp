@@ -6,9 +6,9 @@
 #include <cassert>
 #include <coroutine>
 
-#include "resume_head.hpp"
-
 #include "ropic/detail/shared/resume_phase.hpp"
+
+#include "ropic/detail/either/resume_head.hpp"
 
 namespace ropic::detail
 {

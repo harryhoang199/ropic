@@ -9,7 +9,7 @@
 #include "utils/StateControlRS.hpp"
 #include "utils/TaggedError.hpp"
 
-#include "ropic/detail/either/resume_source.hpp"
+#include "ropic/resume_source.hpp"
 
 // NOLINTBEGIN(readability-magic-numbers,readability-identifier-naming,readability-convert-member-functions-to-static)
 using namespace ropic;

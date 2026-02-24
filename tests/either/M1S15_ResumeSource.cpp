@@ -6,7 +6,7 @@
 
 #include "ropic/detail/shared/resume_phase.hpp"
 
-#include "ropic/detail/either/resume_source.hpp"
+#include "ropic/resume_source.hpp"
 
 using ropic::ResumeSource;
 using ropic::detail::ResumePhase;

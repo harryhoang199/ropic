@@ -15,8 +15,8 @@
 
 #include "Error.hpp"
 
-#include "ropic/detail/either/resume_source.hpp"
-#include "ropic/detail/shared/safe_awaitable.hpp"
+#include "ropic/resume_source.hpp"
+#include "ropic/safe_awaitable.hpp"
 
 namespace examples
 {
