@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025 ropic contributors
 
-#include <atomic>
 #include <gtest/gtest.h>
 #include <string>
 #include <thread>
@@ -33,13 +32,12 @@ namespace
 /// s_awaitSuspendGate controls suspension propagation timing.
 /// Each unique TaggedError<ID> produces a distinct gate.
 template <FixedString ID>
-using Gate = ropic::detail::
+using TestPropagatingAwaiter = ropic::detail::
     PropagatingAwaiter<Void, TaggedError<ID>, Void, TaggedError<ID>, false>;
 
-/// @brief Safe awaiter for normal tests. Spawns a background thread that:
-/// 1. Spins until s_awaitSuspendGate == 0 (gate closed)
-/// 2. Calls rs.requestResume() → SUSPENDED→READY
-/// 3. Decrements gate by 1 → unblocks the waiting PropagatingAwaiter
+/// @brief Safe awaiter for normal tests. Spawns a background thread that
+/// waits for the gate to close, calls requestResume(), then reopens
+/// the gate to unblock the waiting PropagatingAwaiter.
 template <FixedString ID>
 struct GatedResumeAwaiter
 {
@@ -54,12 +52,8 @@ struct GatedResumeAwaiter
     std::thread(
         [rs]()
         {
-          while (Gate<ID>::s_awaitSuspendGate.load() != 0)
-          {
-          }
-          rs.requestResume();
-
-          Gate<ID>::s_awaitSuspendGate.fetch_add(-1, std::memory_order_seq_cst);
+          TestPropagatingAwaiter<ID>::s_awaitSuspendGate.waitAndReopen(
+              [&]() { rs.requestResume(); });
         })
         .detach();
   }
@@ -67,10 +61,9 @@ struct GatedResumeAwaiter
   void await_resume() const {}
 };
 
-/// @brief Safe awaiter for death tests. Spawns a background thread that:
-/// 1. Spins until s_awaitSuspendGate == 0 (gate closed)
-/// 2. Writes RESUMED directly to state (corrupting the state machine)
-/// 3. Decrements gate by 1 → unblocks the waiting PropagatingAwaiter
+/// @brief Safe awaiter for death tests. Spawns a background thread that
+/// waits for the gate to close, writes RESUMED directly to state
+/// (corrupting the state machine), then reopens the gate.
 template <FixedString ID>
 struct GatedCorruptAwaiter
 {
@@ -81,15 +74,14 @@ struct GatedCorruptAwaiter
     std::thread(
         [rs]()
         {
-          while (Gate<ID>::s_awaitSuspendGate.load() != 0)
-          {
-          }
-
-          rs.state.store(
-              ropic::detail::ResumePhase::RESUMED, std::memory_order_seq_cst);
-          rs.state.notify_one();
-
-          Gate<ID>::s_awaitSuspendGate.fetch_add(-1, std::memory_order_seq_cst);
+          TestPropagatingAwaiter<ID>::s_awaitSuspendGate.waitAndReopen(
+              [&]()
+              {
+                rs.state.store(
+                    ropic::detail::ResumePhase::RESUMED,
+                    std::memory_order_seq_cst);
+                rs.state.notify_one();
+              });
         })
         .detach();
   }
@@ -158,7 +150,7 @@ TEST(M1S21NestedSuspendPropagation, U01AllGatesPreOpenedAllLayersFindSuspended)
   RecordProperty("ver", "0.05");
   RecordProperty(
       "desc",
-      "gate=-2 pre-opens all gates; inline requestResume() runs before "
+      "gate=-1 pre-opens all gates; inline requestResume() runs before "
       "any PropagatingAwaiter::await_suspend; all 3 layers find READY "
       "via tryClaimHandle and perform symmetric transfer immediately");
 
@@ -167,11 +159,12 @@ TEST(M1S21NestedSuspendPropagation, U01AllGatesPreOpenedAllLayersFindSuspended)
 #endif
 
   constexpr auto ID = FixedString{"M1-S21-U01"};
-  Gate<ID>::s_awaitSuspendGate.store(-2, std::memory_order_seq_cst);
+  TestPropagatingAwaiter<ID>::s_awaitSuspendGate.reset(-1);
 
   InlineResumeAwaiter<ID> awaiter;
   auto result = outermost<ID>(awaiter);
 
+  EXPECT_LT(TestPropagatingAwaiter<ID>::s_awaitSuspendGate.count(), 0);
   ASSERT_EQ(result.state(), CoroState::DONE);
   EXPECT_FALSE(result.error());
 }
@@ -195,12 +188,12 @@ TEST(M1S21NestedSuspendPropagation, U02RequestResumeBeforeLayer2TryClaimHandle)
 #endif
 
   constexpr auto ID = FixedString{"M1-S21-U02"};
-  Gate<ID>::s_awaitSuspendGate.store(0, std::memory_order_seq_cst);
+  TestPropagatingAwaiter<ID>::s_awaitSuspendGate.reset(0);
 
   GatedResumeAwaiter<ID> awaiter;
   auto result = outermost<ID>(awaiter);
 
-  EXPECT_LT(Gate<ID>::s_awaitSuspendGate, 0);
+  EXPECT_LT(TestPropagatingAwaiter<ID>::s_awaitSuspendGate.count(), 0);
 
   ASSERT_EQ(result.state(), CoroState::DONE);
   EXPECT_FALSE(result.error());
@@ -221,12 +214,12 @@ TEST(M1S21NestedSuspendPropagation, U03RequestResumeBeforeLayer1TryClaimHandle)
 #endif
 
   constexpr auto ID = FixedString{"M1-S21-U03"};
-  Gate<ID>::s_awaitSuspendGate.store(1, std::memory_order_seq_cst);
+  TestPropagatingAwaiter<ID>::s_awaitSuspendGate.reset(1);
 
   GatedResumeAwaiter<ID> awaiter;
   auto result = outermost<ID>(awaiter);
 
-  EXPECT_LT(Gate<ID>::s_awaitSuspendGate, 0);
+  EXPECT_LT(TestPropagatingAwaiter<ID>::s_awaitSuspendGate.count(), 0);
 
   ASSERT_EQ(result.state(), CoroState::DONE);
   EXPECT_FALSE(result.error());
@@ -250,12 +243,12 @@ TEST(
 #endif
 
   constexpr auto ID = FixedString{"M1-S21-U04"};
-  Gate<ID>::s_awaitSuspendGate.store(2, std::memory_order_seq_cst);
+  TestPropagatingAwaiter<ID>::s_awaitSuspendGate.reset(2);
 
   GatedResumeAwaiter<ID> awaiter;
   auto result = outermost<ID>(awaiter);
 
-  EXPECT_LT(Gate<ID>::s_awaitSuspendGate, 0);
+  EXPECT_LT(TestPropagatingAwaiter<ID>::s_awaitSuspendGate.count(), 0);
 
   ASSERT_EQ(result.state(), CoroState::DONE);
   EXPECT_FALSE(result.error());
@@ -278,7 +271,7 @@ TEST(
 #endif
 
   constexpr auto ID = FixedString{"M1-S21-U05"};
-  Gate<ID>::s_awaitSuspendGate.store(3, std::memory_order_seq_cst);
+  TestPropagatingAwaiter<ID>::s_awaitSuspendGate.reset(3);
 
   GatedResumeAwaiter<ID> awaiter;
   auto result = outermost<ID>(awaiter);
@@ -289,7 +282,7 @@ TEST(
   // Background thread eventually signals READY after gate reaches 0
   result.resume();
 
-  EXPECT_LT(Gate<ID>::s_awaitSuspendGate, 0);
+  EXPECT_LT(TestPropagatingAwaiter<ID>::s_awaitSuspendGate.count(), 0);
 
   ASSERT_EQ(result.state(), CoroState::DONE);
   EXPECT_FALSE(result.error());
@@ -313,20 +306,20 @@ TEST(
 
 #ifndef ROPIC_TESTING_MODE
   GTEST_SKIP() << "Requires ROPIC_TESTING_MODE";
-#else
+#endif
+
   constexpr auto ID = FixedString{"M1-S21-U06"};
 
   GTEST_FLAG_SET(death_test_style, "threadsafe");
   EXPECT_DEBUG_DEATH(
       {
-        Gate<ID>::s_awaitSuspendGate.store(0, std::memory_order_seq_cst);
+        TestPropagatingAwaiter<ID>::s_awaitSuspendGate.reset(0);
 
         GatedCorruptAwaiter<ID> awaiter;
         auto result = outermost<ID>(awaiter);
         (void)result;
       },
       "");
-#endif
 }
 
 TEST(
@@ -344,21 +337,20 @@ TEST(
 
 #ifndef ROPIC_TESTING_MODE
   GTEST_SKIP() << "Requires ROPIC_TESTING_MODE";
-#else
+#endif
 
   constexpr auto ID = FixedString{"M1-S21-U07"};
 
   GTEST_FLAG_SET(death_test_style, "threadsafe");
   EXPECT_DEBUG_DEATH(
       {
-        Gate<ID>::s_awaitSuspendGate.store(1, std::memory_order_seq_cst);
+        TestPropagatingAwaiter<ID>::s_awaitSuspendGate.reset(1);
 
         GatedCorruptAwaiter<ID> awaiter;
         auto result = outermost<ID>(awaiter);
         (void)result;
       },
       "");
-#endif
 }
 
 TEST(
@@ -376,21 +368,20 @@ TEST(
 
 #ifndef ROPIC_TESTING_MODE
   GTEST_SKIP() << "Requires ROPIC_TESTING_MODE";
-#else
+#endif
 
   constexpr auto ID = FixedString{"M1-S21-U08"};
 
   GTEST_FLAG_SET(death_test_style, "threadsafe");
   EXPECT_DEBUG_DEATH(
       {
-        Gate<ID>::s_awaitSuspendGate.store(2, std::memory_order_seq_cst);
+        TestPropagatingAwaiter<ID>::s_awaitSuspendGate.reset(2);
 
         GatedCorruptAwaiter<ID> awaiter;
         auto result = outermost<ID>(awaiter);
         (void)result;
       },
       "");
-#endif
 }
 
 // NOLINTEND(readability-magic-numbers,readability-identifier-naming,readability-convert-member-functions-to-static)

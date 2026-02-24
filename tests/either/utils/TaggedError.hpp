@@ -11,7 +11,7 @@
 /// @brief Per-test error type parameterized on a compile-time string ID.
 /// Each unique ID produces a distinct type, ensuring separate
 /// PropagatingAwaiter specializations (and thus separate
-/// s_awaitSuspendGate instances) per test case.
+/// CountingGate s_awaitSuspendGate instances) per test case.
 template <FixedString ID>
 struct TaggedError
 {

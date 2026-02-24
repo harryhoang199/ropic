@@ -3,13 +3,13 @@
 
 #pragma once
 
-#include <atomic>
 #include <cassert>
 #include <coroutine>
 #include <type_traits>
 
 #include "either_promise.inl"
 
+#include "ropic/detail/shared/counting_gate.hpp"
 #include "ropic/void.hpp"
 
 namespace ropic::detail
@@ -119,10 +119,7 @@ public:
     // Attempt to resume as soon as resumeTarget's state becomes READY
 
 #ifdef ROPIC_TESTING_MODE
-    while (s_awaitSuspendGate.load(std::memory_order_seq_cst) == 0)
-    {
-    }
-    s_awaitSuspendGate.fetch_add(-1, std::memory_order_seq_cst);
+    s_awaitSuspendGate.passThrough();
 #endif
 
     assert(
@@ -172,7 +169,14 @@ public:
   }
 
 #ifdef ROPIC_TESTING_MODE
-  std::atomic_int inline static s_awaitSuspendGate{-1};
+  /// @brief Test-only counting gate that controls execution flow
+  /// within await_suspend for deterministic testing of resumeTarget
+  /// propagation.
+  ///
+  /// @see CountingGate for full semantics (negative = open without
+  ///      consuming permits, zero = closed until waitAndReopen(),
+  ///      positive N = N free passes with atomic decrement).
+  CountingGate inline static s_awaitSuspendGate;
 #endif
   // NOLINTEND(readability-identifier-naming)
 };
